@@ -27,4 +27,11 @@ public class DataEntityDAOImpl implements DataEntityDAO {
 		return query.list();
 	}
 
+	@Override
+	public DataEntity findDataEntitieByAlias(String alias) {
+		Query query = sessionFactory.getCurrentSession().createQuery("from DataEntity as d where d.alias like :alias");
+		query.setString("alias", "%" + alias + "%");
+		return (DataEntity) query.uniqueResult();
+	}
+
 }

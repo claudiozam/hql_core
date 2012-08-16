@@ -9,8 +9,10 @@ import javax.sql.DataSource;
 
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
+import edu.palermo.hql.bo.DataEntity;
 import edu.palermo.hql.bo.NplRequest;
 import edu.palermo.hql.bo.NplResponse;
 import edu.upc.freeling.ChartParser;
@@ -45,6 +47,9 @@ public class NplServiceFreeLingImpl implements NplService {
 	
 	@Autowired
 	private DataSource dataSource;
+	
+	@Autowired
+	private NaturalQueryService naturalQueryService;
 	
 	public NplServiceFreeLingImpl() {
 		init();
@@ -120,48 +125,71 @@ public class NplServiceFreeLingImpl implements NplService {
 		String filtroActual = "";
 		String shortTag = "";
 		String form = "";
+		String sqlActual = "";
 		
-		//Connection para trabajar directamente con la base de datos mediante JDBC
-		Connection connection = null;
-		try {
-			connection = dataSource.getConnection();
-			
-			for(Word w : analyzeWords) {
-				shortTag = w.getShortTag();
-				form = w.getForm();
-				if(shortTag.startsWith("VMN")) {
-					if(form.equalsIgnoreCase("listar")) {
-						comandoActual = "listar";
-					} else if (form.equalsIgnoreCase("graficar")) {
-						comandoActual = "graficar";
-					} 
-				} else if(shortTag.startsWith("NC")) {
-					entidadActual = form;
-				} else if(shortTag.startsWith("W")) {
-					
-					
-				} else {
-					log.warn("No se puede procesar la palabra: " + form + " short tag: " + shortTag);
-				}
-			}
-			
-			//ya tengo las palabras base ahora tengo que hacer la consulta......
-			//?????????????????????????????????????????????????????????????????
-		} catch (SQLException e) {
-			log.error("Error al trabajar con la base de datos", e);
-			throw new HQLException("Error al analizar el texto");
-		} finally {
-			try {
-				connection.close();
-			} catch (Exception e) {}
-		}
-		
-
 		NplResponse nplResponse = new NplResponse();
 		long id = 12345678;
 		nplResponse.setId(id);
 		nplResponse.setResponseType("text");
-		nplResponse.addData("simpleText", "El valor es de 120");
+		nplResponse.addData("simpleText", "La consulta no pudo ser ejecutada");
+		
+		
+		// connection = dataSource.getConnection();
+		JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
+		
+		for (Word w : analyzeWords) {
+			shortTag = w.getShortTag();
+			form = w.getForm();
+			if (shortTag.startsWith("VMN")) {
+				if (form.equalsIgnoreCase("listar")) {
+					comandoActual = "listar";
+				} else if (form.equalsIgnoreCase("graficar")) {
+					comandoActual = "graficar";
+				} else if (form.equalsIgnoreCase("contar")) {
+					comandoActual = "contar";
+				}
+			} else if (shortTag.startsWith("NC")) {
+				entidadActual = form;
+			} else if (shortTag.startsWith("W")) {
+
+			} else {
+				log.warn("No se puede procesar la palabra: " + form
+						+ " short tag: " + shortTag);
+			}
+		}
+
+		// ya tengo las palabras base ahora tengo que hacer la consulta......
+		// ?????????????????????????????????????????????????????????????????
+		if (comandoActual.equalsIgnoreCase("contar")) {
+			DataEntity dataEntity = naturalQueryService
+					.findDataEntitieByAlias(entidadActual);
+			if (dataEntity != null) {
+				sqlActual = "select count(*) from " + dataEntity.getTables();
+				int countEntidad = jdbcTemplate.queryForInt(sqlActual);
+				nplResponse.addData("simpleText", "El resultado es " + countEntidad);
+			}
+
+		} else if (comandoActual.equalsIgnoreCase("listar")) {
+			DataEntity dataEntity = naturalQueryService
+					.findDataEntitieByAlias(entidadActual);
+			if (dataEntity != null) {
+				sqlActual = "select count(*) from " + dataEntity.getTables();
+				//int countEntidad = jdbcTemplate.queryForInt(sqlActual);
+				nplResponse.addData("simpleText", "El resultado es ");
+			}
+
+		} else if (comandoActual.equalsIgnoreCase("graficar")) {
+			DataEntity dataEntity = naturalQueryService
+					.findDataEntitieByAlias(entidadActual);
+			if (dataEntity != null) {
+				sqlActual = "select count(*) from " + dataEntity.getTables();
+				//int countEntidad = jdbcTemplate.queryForInt(sqlActual);
+				nplResponse.addData("simpleText", "El resultado es ");
+			}
+
+		}
+
+		
 		log.info("Resultado del analize " + nplResponse);
 		return nplResponse;
 	}

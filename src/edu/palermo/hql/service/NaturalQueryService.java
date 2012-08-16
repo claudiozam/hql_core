@@ -25,4 +25,8 @@ public class NaturalQueryService {
 		return naturalQueryCommandDAO.getNaturalQueryCommands();
 	}
 	
+	public DataEntity findDataEntitieByAlias(String alias) {
+		return dataEntityDAO.findDataEntitieByAlias(alias);
+	}
+	
 }

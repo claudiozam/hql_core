@@ -10,7 +10,16 @@ public class DataEntity {
 	private Long id;
 	private String tables;
 	private String colummns;
+	private String alias;
 	
+	public String getAlias() {
+		return alias;
+	}
+
+	public void setAlias(String alias) {
+		this.alias = alias;
+	}
+
 	@Id
 	@GeneratedValue
 	public Long getId() {
