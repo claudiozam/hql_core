@@ -12,7 +12,15 @@
       <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.5/jquery.min.js"></script>
       <script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8/jquery-ui.min.js"></script>
 <script type="text/javascript">
+
+
 $(function() {
+	
+	$('#buttonExecute').click(function() {
+		executeAnalize();
+	});
+
+	
 	function split( val ) {
 		return val.split( / \s*/ );
 	}
@@ -58,6 +66,16 @@ $(function() {
 			}
 		});
 });
+
+function executeAnalize() {
+	var nplRequest = { text: $('#textToanalize').val(), userAgent: 'webbrowser'};
+	$.getJSON('analize.html', nplRequest, function(nplResponse) {
+		var data = nplResponse.responseData;
+		$('#divOutput').html(data.simpleText);
+	});
+}
+
+
 </script>
 </head>
 <body>
