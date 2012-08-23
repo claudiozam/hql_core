@@ -230,7 +230,12 @@ public class NplServiceFreeLingImpl implements NplService {
 			DataEntity dataEntity = naturalQueryService
 					.findDataEntitieByAlias(entidadActual);
 			if (dataEntity != null) {
+				int sizeArray = nombres.size();
+				
 				sqlActual = "select count(" + dataEntity.getCountColumn() + ") from " + dataEntity.getTables();
+				if (sizeArray >= 3 ){
+					sqlActual += " where " + nombres.get(1).toString() + " = '" + nombres.get(2).toString() + "'";
+				} 
 				log.info("SQL Generadp: " + sqlActual);
 				int countEntidad = jdbcTemplate.queryForInt(sqlActual);
 				nplResponse.addData("simpleText", "El resultado es " + countEntidad);
