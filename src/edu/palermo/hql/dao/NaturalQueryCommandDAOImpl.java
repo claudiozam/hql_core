@@ -7,7 +7,6 @@ import org.hibernate.SessionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
-import edu.palermo.hql.bo.DataEntity;
 import edu.palermo.hql.bo.NaturalQueryCommand;
 
 @Repository

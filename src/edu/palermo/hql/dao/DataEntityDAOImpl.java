@@ -15,11 +15,13 @@ public class DataEntityDAOImpl implements DataEntityDAO {
 	@Autowired
 	private SessionFactory sessionFactory;
 	
+	
 	@Override
 	public List<DataEntity> getDataEntities() {
 		return sessionFactory.getCurrentSession().createQuery("from DataEntity as d order by d.name").list();
 	}
 
+	
 	@Override
 	public List<DataEntity> getDataEntities(String name) {
 		Query query = sessionFactory.getCurrentSession().createQuery("from DataEntity as d where d.name like :name order by d.name");

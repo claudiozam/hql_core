@@ -1,7 +1,5 @@
 package edu.palermo.hql.service;
 
-import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -127,15 +125,71 @@ public class NplServiceFreeLingImpl implements NplService {
 		String form = "";
 		String sqlActual = "";
 		
+		// Prueba
+		//--------------------------------------
+		String tag = "";
+		String lemma = "";
+		//--------------------------------------
+		
+		ArrayList<String> nombres = new ArrayList<String>(); 
+				
+		
+		
 		NplResponse nplResponse = new NplResponse();
 		long id = 12345678;
 		nplResponse.setId(id);
 		nplResponse.setResponseType("text");
 		nplResponse.addData("simpleText", "La consulta no pudo ser ejecutada");
 		
+		JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
+		
+		
+		/*
 		
 		// connection = dataSource.getConnection();
-		JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
+		
+		for (Word w : analyzeWords) {
+			shortTag = w.getShortTag();
+			form = w.getForm();
+
+			tag = w.getTag();
+			lemma = w.getLemma();	
+
+			// Word: listar Lc: listar Lemma: listar Tag: VMN0000 ShortTag: VMN
+			// Word: alumnos Lc: alumnos Lemma: alumno Tag: NCMP000 ShortTag: NC
+			// Word: . Lc: . Lemma: . Tag: Fp ShortTag: Fp
+			
+			String desc = (String) jdbcTemplate
+				    .queryForObject("select p.desc from position1 p where p.value = ?", 
+				    		new Object[]{tag.substring(0, 1)}, String.class);
+
+			// Identificar el tipo de palabra
+			if (desc.equalsIgnoreCase("Verbos")){
+				comandoActual = lemma;
+			}
+			else if (desc.equalsIgnoreCase("Nombres")){
+				
+			}
+			else if (desc.equalsIgnoreCase("Adjetivos")){
+				
+			}
+			else if (desc.equalsIgnoreCase("Advervios")){
+	
+			}
+			else if (desc.equalsIgnoreCase("Signos de Puntuacion")){
+				if (tag.equalsIgnoreCase("Fp")){
+					// punto (.)
+				}
+			}
+
+			//entidadActual = form;			
+		}
+		*/
+		
+		//nplResponse.addData("simpleText", "Lemma: " + comandoActual);
+		// ------------------------------------------------------------		
+		// Codigo original
+		// ------------------------------------------------------------
 		
 		for (Word w : analyzeWords) {
 			shortTag = w.getShortTag();
@@ -149,7 +203,14 @@ public class NplServiceFreeLingImpl implements NplService {
 					comandoActual = "contar";
 				}
 			} else if (shortTag.startsWith("NC")) {
-				entidadActual = form;
+
+				// Si el array esta vacio entonces es el primer NC y por lo tanto es la entidad 
+				if (nombres.isEmpty()){
+					entidadActual = form;
+				}
+				
+				nombres.add(form);
+				
 			} else if (shortTag.startsWith("W")) {
 
 			} else {
@@ -157,18 +218,25 @@ public class NplServiceFreeLingImpl implements NplService {
 						+ " short tag: " + shortTag);
 			}
 		}
+		
+		//------------------------------------------------------------
 
 		// ya tengo las palabras base ahora tengo que hacer la consulta......
 		// ?????????????????????????????????????????????????????????????????
+		
+
+		
 		if (comandoActual.equalsIgnoreCase("contar")) {
 			DataEntity dataEntity = naturalQueryService
 					.findDataEntitieByAlias(entidadActual);
 			if (dataEntity != null) {
-				sqlActual = "select count(*) from " + dataEntity.getTables();
+				sqlActual = "select count(" + dataEntity.getCountColumn() + ") from " + dataEntity.getTables();
+				log.info("SQL Generadp: " + sqlActual);
 				int countEntidad = jdbcTemplate.queryForInt(sqlActual);
 				nplResponse.addData("simpleText", "El resultado es " + countEntidad);
 			}
-
+		}
+		/*
 		} else if (comandoActual.equalsIgnoreCase("listar")) {
 			DataEntity dataEntity = naturalQueryService
 					.findDataEntitieByAlias(entidadActual);
@@ -184,14 +252,14 @@ public class NplServiceFreeLingImpl implements NplService {
 			if (dataEntity != null) {
 				sqlActual = "select count(*) from " + dataEntity.getTables();
 				//int countEntidad = jdbcTemplate.queryForInt(sqlActual);
+				
 				nplResponse.addData("simpleText", "El resultado es ");
 			}
 
 		}
-
-		
+		 */
+				
 		log.info("Resultado del analize " + nplResponse);
 		return nplResponse;
 	}
-
 }
