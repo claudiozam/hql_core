@@ -23,9 +23,9 @@ public class NaturalQueryCommandDAOImpl implements NaturalQueryCommandDAO {
 	}
 
 	@Override
-	public List<NaturalQueryCommand> getNaturalQueryCommands(String type) {
-		Query query = sessionFactory.getCurrentSession().createQuery("from NaturalQueryCommand as n where n.type = :type order by n.name");
-		query.setString("type", type);
+	public List<NaturalQueryCommand> getNaturalQueryCommands(String name) {
+		Query query = sessionFactory.getCurrentSession().createQuery("from NaturalQueryCommand as n where n.name like :name order by n.name");
+		query.setString("name", "%" + name + "%");
 		return query.list();
 	}
 

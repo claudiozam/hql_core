@@ -23,9 +23,9 @@ public class DataEntityDAOImpl implements DataEntityDAO {
 
 	
 	@Override
-	public List<DataEntity> getDataEntities(String name) {
-		Query query = sessionFactory.getCurrentSession().createQuery("from DataEntity as d where d.name like :name order by d.name");
-		query.setString("name", "%" + name + "%");
+	public List<DataEntity> getDataEntities(String alias) {
+		Query query = sessionFactory.getCurrentSession().createQuery("from DataEntity as d where d.alias like :alias order by d.alias");
+		query.setString("alias", "%" + alias + "%");
 		return query.list();
 	}
 
