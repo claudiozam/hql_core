@@ -41,10 +41,8 @@ public class HqlMainController {
 	public List<AutoCompleteItem> autoCompleteNaturalQueryCommands(String term) throws HQLException {
 		log.info("Ejecutando autoCompleteNaturalQueryCommands para el termino: " + term);
 		//Ver si filtramos comandos duplicados y de damos algo de logica al autocomplete para generar las consultas
-		List<AutoCompleteItem> items = new ArrayList<AutoCompleteItem>();
-		for(NaturalQueryCommand command : naturalQueryService.getNaturalQueryCommands()) {
-			items.add(new AutoCompleteItem(command.getId(), command.getName(), command.getName(), ""));
-		}
+		List<AutoCompleteItem> items = naturalQueryService.getAutoCompleteItems(term);
+	
 		return items;
 	}
 	
