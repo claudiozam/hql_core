@@ -16,6 +16,7 @@ public class DataEntity {
 	private String groupColumn;
 	private String defaultOrderBy;
 	
+	
 	public String getAlias() {
 		return alias;
 	}
