@@ -1,5 +1,6 @@
 package edu.palermo.hql.service;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -127,13 +128,12 @@ public class NplServiceFreeLingImpl implements NplService {
 		
 		// Prueba
 		//--------------------------------------
+		/*
 		String tag = "";
+		*/
 		String lemma = "";
+		ArrayList<String> nombres = new ArrayList<String>();
 		//--------------------------------------
-		
-		ArrayList<String> nombres = new ArrayList<String>(); 
-				
-		
 		
 		NplResponse nplResponse = new NplResponse();
 		long id = 12345678;
@@ -144,7 +144,7 @@ public class NplServiceFreeLingImpl implements NplService {
 		JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
 		
 		
-		/*
+		/* 
 		
 		// connection = dataSource.getConnection();
 		
@@ -167,20 +167,6 @@ public class NplServiceFreeLingImpl implements NplService {
 			if (desc.equalsIgnoreCase("Verbos")){
 				comandoActual = lemma;
 			}
-			else if (desc.equalsIgnoreCase("Nombres")){
-				
-			}
-			else if (desc.equalsIgnoreCase("Adjetivos")){
-				
-			}
-			else if (desc.equalsIgnoreCase("Advervios")){
-	
-			}
-			else if (desc.equalsIgnoreCase("Signos de Puntuacion")){
-				if (tag.equalsIgnoreCase("Fp")){
-					// punto (.)
-				}
-			}
 
 			//entidadActual = form;			
 		}
@@ -194,6 +180,9 @@ public class NplServiceFreeLingImpl implements NplService {
 		for (Word w : analyzeWords) {
 			shortTag = w.getShortTag();
 			form = w.getForm();
+			
+			lemma = w.getLemma();
+			
 			if (shortTag.startsWith("VMN")) {
 				if (form.equalsIgnoreCase("listar")) {
 					comandoActual = "listar";
@@ -213,6 +202,24 @@ public class NplServiceFreeLingImpl implements NplService {
 				
 			} else if (shortTag.startsWith("W")) {
 
+				
+				// Fechas
+				// [V:26:09:1992:03.00:pm]
+				String regex = "[\\[LMJVSD]:\\d{2}:\\d{2}:\\d{4}:\\d{2}.\\d{2}:[a-pm]$";
+				//ArrayList<String> fecha = new ArrayList<String>();
+				String fecha[] = null; 
+				if (lemma.matches(regex)){
+					fecha = lemma.split(regex);
+				}
+				
+				// Create a pattern to match breaks
+				//Pattern p = Pattern.compile("[,\\s]+");
+				// Split input with the pattern
+				//String[] result = p.split("one,two, three   four ,  five");
+				
+				SimpleDateFormat formatoDeFecha = new SimpleDateFormat(fecha.toString());
+				
+				nplResponse.addData("simpleText", "El resultado es " + formatoDeFecha);
 			} else {
 				log.warn("No se puede procesar la palabra: " + form
 						+ " short tag: " + shortTag);

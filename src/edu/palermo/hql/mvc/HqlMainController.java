@@ -1,6 +1,5 @@
 package edu.palermo.hql.mvc;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.log4j.Logger;
@@ -11,7 +10,6 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import edu.palermo.hql.bo.AutoCompleteItem;
-import edu.palermo.hql.bo.NaturalQueryCommand;
 import edu.palermo.hql.bo.NplRequest;
 import edu.palermo.hql.bo.NplResponse;
 import edu.palermo.hql.service.HQLException;
