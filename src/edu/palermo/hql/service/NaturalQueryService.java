@@ -10,10 +10,8 @@ import org.springframework.transaction.annotation.Transactional;
 import edu.palermo.hql.bo.AutoCompleteItem;
 import edu.palermo.hql.bo.DataEntity;
 import edu.palermo.hql.bo.NaturalQueryCommand;
-import edu.palermo.hql.bo.Tag;
 import edu.palermo.hql.dao.DataEntityDAO;
 import edu.palermo.hql.dao.NaturalQueryCommandDAO;
-import edu.palermo.hql.dao.TagDAO;
 
 @Service
 @Transactional(rollbackFor=Exception.class)
@@ -24,9 +22,6 @@ public class NaturalQueryService {
 	
 	@Autowired
 	private NaturalQueryCommandDAO naturalQueryCommandDAO;
-	
-	@Autowired
-	private TagDAO tagDAO;
 	
 	public List<NaturalQueryCommand> getNaturalQueryCommands() {
 		return naturalQueryCommandDAO.getNaturalQueryCommands();
@@ -49,7 +44,4 @@ public class NaturalQueryService {
 		return dataEntityDAO.findDataEntitieByAlias(alias);
 	}
 	
-	public Tag findTagValueByCode(String code){
-		return tagDAO.findTagValueByCode(code);
-	}
 }
