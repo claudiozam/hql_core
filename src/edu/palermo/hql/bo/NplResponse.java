@@ -4,11 +4,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-public class NplResponse<T> {
+public class NplResponse {
 
 	private Long id;
 	private String responseType;
-	private T responseData;
+	private Object responseData;
 	public Long getId() {
 		return id;
 	}
@@ -20,11 +20,11 @@ public class NplResponse<T> {
 		return responseType;
 	}
 	
-	public T getResponseData() {
+	public Object getResponseData() {
 		return responseData;
 	}
 
-	public void setResponseData(T responseData) {
+	public void setResponseData(Object responseData) {
 		this.responseData = responseData;
 	}
 

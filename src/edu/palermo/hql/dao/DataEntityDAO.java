@@ -6,6 +6,6 @@ import java.util.*;
 public interface DataEntityDAO {
 
 	public List<DataEntity> getDataEntities();
-	public List<DataEntity> getDataEntities(String name);
-
+	public List<DataEntity> getDataEntities(String alias);
+	public DataEntity findDataEntitieByAlias(String alias);
 }

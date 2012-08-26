@@ -5,6 +5,6 @@ import edu.palermo.hql.bo.NplResponse;
 
 public interface NplService {
 
-	public NplResponse<?> analize(NplRequest nplRequest) throws HQLException;
+	public NplResponse analize(NplRequest nplRequest) throws HQLException;
 	
 }

@@ -1,6 +1,5 @@
 package edu.palermo.hql.mvc;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.log4j.Logger;
@@ -11,7 +10,6 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import edu.palermo.hql.bo.AutoCompleteItem;
-import edu.palermo.hql.bo.NaturalQueryCommand;
 import edu.palermo.hql.bo.NplRequest;
 import edu.palermo.hql.bo.NplResponse;
 import edu.palermo.hql.service.HQLException;
@@ -41,17 +39,15 @@ public class HqlMainController {
 	public List<AutoCompleteItem> autoCompleteNaturalQueryCommands(String term) throws HQLException {
 		log.info("Ejecutando autoCompleteNaturalQueryCommands para el termino: " + term);
 		//Ver si filtramos comandos duplicados y de damos algo de logica al autocomplete para generar las consultas
-		List<AutoCompleteItem> items = new ArrayList<AutoCompleteItem>();
-		for(NaturalQueryCommand command : naturalQueryService.getNaturalQueryCommands()) {
-			items.add(new AutoCompleteItem(command.getId(), command.getName(), command.getName(), ""));
-		}
+		List<AutoCompleteItem> items = naturalQueryService.getAutoCompleteItems(term);
+	
 		return items;
 	}
 	
 	
 	@ResponseBody
 	@RequestMapping(value="/analize", method=RequestMethod.GET)
-	public NplResponse<?> analize(NplRequest nplRequest) throws HQLException {
+	public NplResponse analize(NplRequest nplRequest) throws HQLException {
 		log.info("Ejecutando analize");
 		return nplService.analize(nplRequest);
 	}
