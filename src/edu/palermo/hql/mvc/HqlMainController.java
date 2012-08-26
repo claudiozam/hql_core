@@ -51,7 +51,7 @@ public class HqlMainController {
 	
 	@ResponseBody
 	@RequestMapping(value="/analize", method=RequestMethod.GET)
-	public NplResponse analize(NplRequest nplRequest) throws HQLException {
+	public NplResponse<?> analize(NplRequest nplRequest) throws HQLException {
 		log.info("Ejecutando analize");
 		return nplService.analize(nplRequest);
 	}

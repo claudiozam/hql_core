@@ -1,14 +1,19 @@
 package edu.palermo.hql.service;
 
 import java.sql.Connection;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.sql.DataSource;
 
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 import edu.palermo.hql.bo.NplRequest;
@@ -113,14 +118,14 @@ public class NplServiceFreeLingImpl implements NplService {
 		return this.process(analyzeWords);
 	}
 	
-	private NplResponse process(List<Word> analyzeWords) throws HQLException {
+	private NplResponse<?> process(List<Word> analyzeWords) throws HQLException {
 
 		String comandoActual = "";
 		String entidadActual = "";
 		String filtroActual = "";
 		String shortTag = "";
 		String form = "";
-		
+		NplResponse nplResponse = null;
 		//Connection para trabajar directamente con la base de datos mediante JDBC
 		Connection connection = null;
 		try {
@@ -145,6 +150,17 @@ public class NplServiceFreeLingImpl implements NplService {
 				}
 			}
 			
+			//nplResponse = new NplResponse<List<List<Object>>>();
+			nplResponse = new NplResponse<Map<String, String>>();
+			HashMap<String , String> values = new HashMap<String, String>();
+			values.put("simpleText", "El valor es de 120");
+			//nplResponse.addData("simpleText", "El valor es de 120");
+			Statement statement = connection.createStatement();
+			ResultSet resultSet = statement.executeQuery("SELECT * FROM NaturalQueryCommand");
+			nplResponse.setResponseData(values);
+			//nplResponse.setResponseData(resultSetToObjectList(resultSet));
+			resultSet.close();
+			
 			//ya tengo las palabras base ahora tengo que hacer la consulta......
 			//?????????????????????????????????????????????????????????????????
 		} catch (SQLException e) {
@@ -156,14 +172,35 @@ public class NplServiceFreeLingImpl implements NplService {
 			} catch (Exception e) {}
 		}
 		
-
-		NplResponse nplResponse = new NplResponse();
 		long id = 12345678;
 		nplResponse.setId(id);
 		nplResponse.setResponseType("text");
-		nplResponse.addData("simpleText", "El valor es de 120");
+		//nplResponse.addData("simpleText", "El valor es de 120");
 		log.info("Resultado del analize " + nplResponse);
 		return nplResponse;
 	}
+	
+	public static List<List<Object>> resultSetToObjectList(ResultSet resultSet)  
+		    throws SQLException {  
+		        ArrayList<List<Object>> table;  
+		        int columnCount = resultSet.getMetaData().getColumnCount();  
+		          
+		        if(resultSet.getType() == ResultSet.TYPE_FORWARD_ONLY)   
+		            table = new ArrayList<List<Object>>();  
+		        else {    
+		            resultSet.last();  
+		            table = new ArrayList<List<Object>>(resultSet.getRow());  
+		            resultSet.beforeFirst();  
+		        }  
+		    
+		        for(ArrayList<Object> row; resultSet.next(); table.add(row)) {  
+		            row = new ArrayList<Object>(columnCount);  
+		      
+		            for(int c = 1; c <= columnCount; ++ c)  
+		                row.add(resultSet.getObject(c));  
+		        }  
+		          
+		        return table;  
+		    }  
 
 }
