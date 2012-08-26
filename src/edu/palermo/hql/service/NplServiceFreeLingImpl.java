@@ -1,6 +1,6 @@
 package edu.palermo.hql.service;
 
-import java.text.SimpleDateFormat;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -126,14 +126,21 @@ public class NplServiceFreeLingImpl implements NplService {
 		String form = "";
 		String sqlActual = "";
 		
-		// Prueba
-		//--------------------------------------
-		/*
 		String tag = "";
-		*/
 		String lemma = "";
+		ArrayList<String> oracion = new ArrayList<String>();
+		
+		/*
+		Array con palabras de tipo nombres 
+		
+		Ej. "contar [alumnos] de la [carrera] de [informatica]."
+		
+		nombres.get(0) = entidad (alumnos)
+		nombres.get(1) = campo where  (carrera)
+		nombres.get(2) = valor buscado (informatica)
+		*/ 
 		ArrayList<String> nombres = new ArrayList<String>();
-		//--------------------------------------
+
 		
 		NplResponse nplResponse = new NplResponse();
 		long id = 12345678;
@@ -142,46 +149,21 @@ public class NplServiceFreeLingImpl implements NplService {
 		nplResponse.addData("simpleText", "La consulta no pudo ser ejecutada");
 		
 		JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
-		
-		
+				
 		/* 
-		
-		// connection = dataSource.getConnection();
-		
-		for (Word w : analyzeWords) {
-			shortTag = w.getShortTag();
-			form = w.getForm();
-
-			tag = w.getTag();
-			lemma = w.getLemma();	
-
-			// Word: listar Lc: listar Lemma: listar Tag: VMN0000 ShortTag: VMN
-			// Word: alumnos Lc: alumnos Lemma: alumno Tag: NCMP000 ShortTag: NC
-			// Word: . Lc: . Lemma: . Tag: Fp ShortTag: Fp
-			
 			String desc = (String) jdbcTemplate
 				    .queryForObject("select p.desc from position1 p where p.value = ?", 
 				    		new Object[]{tag.substring(0, 1)}, String.class);
-
-			// Identificar el tipo de palabra
-			if (desc.equalsIgnoreCase("Verbos")){
-				comandoActual = lemma;
-			}
-
-			//entidadActual = form;			
-		}
 		*/
-		
-		//nplResponse.addData("simpleText", "Lemma: " + comandoActual);
-		// ------------------------------------------------------------		
-		// Codigo original
-		// ------------------------------------------------------------
 		
 		for (Word w : analyzeWords) {
 			shortTag = w.getShortTag();
 			form = w.getForm();
 			
+			tag = w.getTag();
 			lemma = w.getLemma();
+			
+			/* ****************************** Verbos ************************************ */
 			
 			if (shortTag.startsWith("VMN")) {
 				if (form.equalsIgnoreCase("listar")) {
@@ -190,20 +172,90 @@ public class NplServiceFreeLingImpl implements NplService {
 					comandoActual = "graficar";
 				} else if (form.equalsIgnoreCase("contar")) {
 					comandoActual = "contar";
+				}				
+			}
+			
+			/* ****************************** Preposiciones ************************************ */
+			
+			else if (shortTag.startsWith("S")) {
+				if (tag.startsWith("SPS00")){
+					// "de" = separador de nombres
+					
 				}
-			} else if (shortTag.startsWith("NC")) {
+			}
+			
+			/* ****************************** Nombres ************************************ */
+			
+			else if (shortTag.startsWith("N")) {
 
-				// Si el array esta vacio entonces es el primer NC y por lo tanto es la entidad 
-				if (nombres.isEmpty()){
-					entidadActual = form;
+				if (shortTag.startsWith("NC")){
+					// Nombres Comunes
+					// Posibles entidades!!!
+
+					// Si el Array esta vacio entonces es el primer "NC" y por lo tanto es la entidad
+					// Tambien deberiamos considerar que no haya un "de" delante (Ej. alumnos [de] la facultad...)
+					if (nombres.isEmpty()){
+						// Guardo el nombre de la entidad
+						entidadActual = form;
+					}
+
+				} else if (shortTag.startsWith("NP")){
+					// Nombres Propios
+					// Posibles filtros del WHERE
+					
+					// NP000G0    Lugar (ej. Barcelona) 
+					// NP000P0    Nombre propio (ej. Pedro)
+					// NP000O0    organizacion (ej. UNICEF)
 				}
 				
+				// Agrego todas las palabras de tipo N al Array de nombres 
 				nombres.add(form);
-				
-			} else if (shortTag.startsWith("W")) {
+			}
+			
+			/* ****************************** Pronombres ************************************ */
+			
+			else if (shortTag.startsWith("P")){
 
+				if (shortTag.startsWith("PI")){
+					// Pronombres Indefinidos					
+				}
+				else if (shortTag.startsWith("PT")){
+					// Pronombres Interrogativos
+				}
+				else if (shortTag.startsWith("PR")){
+					// Pronombres Relativos
+					// Posibles tipos de filtro para where (ej cuales, cuantos, quienes, donde)
+					
+				}
 				
-				// Fechas
+			}
+			 
+			/* ****************************** Conjunciones ************************************ */
+			
+			else if (shortTag.startsWith("C")) {
+
+				if (shortTag.startsWith("CS")) {
+					
+				}
+				else if (shortTag.startsWith("CC")){
+					if (form.equalsIgnoreCase("y")){
+						// Agregar un AND a la consulta
+					}
+					else if (form.equalsIgnoreCase("o")){
+						// Agregar un OR a la consulta
+					}
+				}
+			}
+			
+			/* ****************************** Cifras y numerales ************************************ */
+			
+			else if (shortTag.startsWith("Z")){
+
+			}
+			
+			/* ****************************** Fechas ************************************ */
+			
+			else if (shortTag.startsWith("W")) {
 				// [V:26:09:1992:03.00:pm]
 				String regex = "[\\[LMJVSD]:\\d{2}:\\d{2}:\\d{4}:\\d{2}.\\d{2}:[a-pm]$";
 				//ArrayList<String> fecha = new ArrayList<String>();
@@ -217,22 +269,41 @@ public class NplServiceFreeLingImpl implements NplService {
 				// Split input with the pattern
 				//String[] result = p.split("one,two, three   four ,  five");
 				
-				SimpleDateFormat formatoDeFecha = new SimpleDateFormat(fecha.toString());
+				//SimpleDateFormat formatoDeFecha = new SimpleDateFormat(fecha.toString());
 				
-				nplResponse.addData("simpleText", "El resultado es " + formatoDeFecha);
+				nplResponse.addData("simpleText", "El resultado es " + fecha);
+				
+				
 			} else {
 				log.warn("No se puede procesar la palabra: " + form
 						+ " short tag: " + shortTag);
 			}
 		}
-		
+		// Fin del FOR
 		//------------------------------------------------------------
 
+		// Preguntar si la oracion es valida
+		if (oracion.size() > 0){
+		
+			/* Premisas
+			
+			*La oracion tiene que tener un verbo "V"
+			*La oracion tiene que tener al menos una palabra de tipo nombre "N"
+			*Si la oracion tiene un "CC" igual a la conjuncion "y" entonces hay que agregar a la consulta un AND
+			*Si la oracion tiene un "CC" igual a la conjuncion "o" entonces hay que agregar a la consulta un OR
+			*La preposicion "SPS00" ("de") es nuestro separador de nombres "N" 
+			
+			 for (String palabra : oracion) {
+				
+			}
+			*/
+			 
+			
+		}
+		
 		// ya tengo las palabras base ahora tengo que hacer la consulta......
 		// ?????????????????????????????????????????????????????????????????
-		
-
-		
+				
 		if (comandoActual.equalsIgnoreCase("contar")) {
 			DataEntity dataEntity = naturalQueryService
 					.findDataEntitieByAlias(entidadActual);
@@ -243,7 +314,7 @@ public class NplServiceFreeLingImpl implements NplService {
 				if (sizeArray >= 3 ){
 					sqlActual += " where " + nombres.get(1).toString() + " = '" + nombres.get(2).toString() + "'";
 				} 
-				log.info("SQL Generadp: " + sqlActual);
+				log.info("SQL Generado: " + sqlActual);
 				int countEntidad = jdbcTemplate.queryForInt(sqlActual);
 				nplResponse.addData("simpleText", "El resultado es " + countEntidad);
 			}
