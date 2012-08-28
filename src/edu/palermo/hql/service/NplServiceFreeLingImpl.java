@@ -178,10 +178,35 @@ public class NplServiceFreeLingImpl implements NplService {
 			/* ****************************** Preposiciones ************************************ */
 			
 			else if (shortTag.startsWith("S")) {
+				
 				if (tag.startsWith("SPS00")){
-					// "de" = separador de nombres
 					
+					if (form.equalsIgnoreCase("de")){
+						// "de" = separador de nombres	
+					}
+					else if (form.equalsIgnoreCase("a")){
+						
+					}
+					else if (form.equalsIgnoreCase("con")){
+						
+					}
+					else if (form.equalsIgnoreCase("hasta")){
+						
+					}
+					else if (form.equalsIgnoreCase("desde")){
+						
+					}
+					else if (form.equalsIgnoreCase("entre")){
+						
+					}
+					else if (form.equalsIgnoreCase("en")){
+						
+					}
+					else if (form.equalsIgnoreCase("por")){
+						
+					}
 				}
+				
 			}
 			
 			/* ****************************** Nombres ************************************ */
@@ -194,7 +219,10 @@ public class NplServiceFreeLingImpl implements NplService {
 
 					// Si el Array esta vacio entonces es el primer "NC" y por lo tanto es la entidad
 					// Tambien deberiamos considerar que no haya un "de" delante (Ej. alumnos [de] la facultad...)
+					// Si un nombre "NC" no esta precedido por una preposicion entonces es una ENTIDAD (Agregar este filtro!!!)
 					if (nombres.isEmpty()){
+						// Primero deberia recorrer el Array "oracion" para saber si existe una preposicion
+						
 						// Guardo el nombre de la entidad
 						entidadActual = form;
 					}
@@ -212,6 +240,20 @@ public class NplServiceFreeLingImpl implements NplService {
 				nombres.add(form);
 			}
 			
+			/* ****************************** Adjetivos ************************************ */
+			
+			else if (shortTag.startsWith("A")){
+				if (form.equalsIgnoreCase("igual")){
+					
+				}
+				else if (form.equalsIgnoreCase("mayor")){
+					
+				}
+				else if (form.equalsIgnoreCase("menor")){
+					
+				}
+			}
+			
 			/* ****************************** Pronombres ************************************ */
 			
 			else if (shortTag.startsWith("P")){
@@ -225,7 +267,9 @@ public class NplServiceFreeLingImpl implements NplService {
 				else if (shortTag.startsWith("PR")){
 					// Pronombres Relativos
 					// Posibles tipos de filtro para where (ej cuales, cuantos, quienes, donde)
-					
+					if (form.equalsIgnoreCase("donde")){
+						
+					}
 				}
 				
 			}
@@ -241,7 +285,15 @@ public class NplServiceFreeLingImpl implements NplService {
 					if (form.equalsIgnoreCase("y")){
 						// Agregar un AND a la consulta
 					}
+					else if (form.equalsIgnoreCase("e")){
+						// Variante de "y" cuando la palabra siguiente empieza con "i"
+						// Agregar un AND a la consulta
+					}
 					else if (form.equalsIgnoreCase("o")){
+						// Agregar un OR a la consulta
+					}
+					else if (form.equalsIgnoreCase("u")){
+						// Variante de "u" cuando la palabra siguiente empieza con "o"
 						// Agregar un OR a la consulta
 					}
 				}
@@ -292,12 +344,32 @@ public class NplServiceFreeLingImpl implements NplService {
 			*Si la oracion tiene un "CC" igual a la conjuncion "y" entonces hay que agregar a la consulta un AND
 			*Si la oracion tiene un "CC" igual a la conjuncion "o" entonces hay que agregar a la consulta un OR
 			*La preposicion "SPS00" ("de") es nuestro separador de nombres "N" 
+			*El orden de las palabras determina la funcion que cumplen dentro de la consulta
+			*Si un nombre "NC" no esta precedido por una preposicion entonces es una ENTIDAD
+			
 			
 			 for (String palabra : oracion) {
 				
 			}
 			*/
+			
+			// Tipos de oraciones validas
+			/*
+			 Lista alumnos
+			 [VMN][NC] 
 			 
+			 Lista alumnos donde carrera es igual a medicina
+			 [VMN][NC][PR000000][NC][VSIP3S0][AQ0CS0][SPS00][NC]
+			
+			 Listar alumnos ordenado por legajo
+			 [VMN][NC][VMP00PM][SPS00][NC]
+			 
+			
+			
+			Contar alumnos
+			Listar productos donde el precio es mayor a 10000
+			Contar inscriptos desde enero del 2012 hasta abril del 2013
+			 */
 			
 		}
 		
