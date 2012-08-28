@@ -1,8 +1,9 @@
 package edu.palermo.hql.service;
-
-
-import java.util.ArrayList;
-import java.util.List;
+import java.sql.*;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.*;
+import java.util.Date;
 
 import javax.sql.DataSource;
 
@@ -14,20 +15,8 @@ import org.springframework.stereotype.Component;
 import edu.palermo.hql.bo.DataEntity;
 import edu.palermo.hql.bo.NplRequest;
 import edu.palermo.hql.bo.NplResponse;
-import edu.upc.freeling.ChartParser;
-import edu.upc.freeling.DepTxala;
-import edu.upc.freeling.HmmTagger;
-import edu.upc.freeling.ListSentence;
-import edu.upc.freeling.ListWord;
-import edu.upc.freeling.Maco;
-import edu.upc.freeling.MacoOptions;
-import edu.upc.freeling.Nec;
-import edu.upc.freeling.Sentence;
-import edu.upc.freeling.Splitter;
-import edu.upc.freeling.Tokenizer;
-import edu.upc.freeling.UkbWrap;
-import edu.upc.freeling.Util;
-import edu.upc.freeling.Word;
+import edu.palermo.hql.general.GeneralUtils;
+import edu.upc.freeling.*;
 
 @Component
 public class NplServiceFreeLingImpl implements NplService {
@@ -119,11 +108,15 @@ public class NplServiceFreeLingImpl implements NplService {
 	
 	private NplResponse process(List<Word> analyzeWords) throws HQLException {
 
+		HashMap<String , String> values = new HashMap<String, String>();
+		
+		String mascaraActual = "";
 		String comandoActual = "";
 		String entidadActual = "";
 		String filtroActual = "";
 		String shortTag = "";
 		String form = "";
+		
 		String sqlActual = "";
 		
 		String tag = "";
@@ -146,7 +139,8 @@ public class NplServiceFreeLingImpl implements NplService {
 		long id = 12345678;
 		nplResponse.setId(id);
 		nplResponse.setResponseType("text");
-		nplResponse.addData("simpleText", "La consulta no pudo ser ejecutada");
+		values.put("simpleText", "La consulta no pudo ser ejecutada");
+		nplResponse.setResponseData(values);
 		
 		JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
 				
@@ -163,6 +157,7 @@ public class NplServiceFreeLingImpl implements NplService {
 			tag = w.getTag();
 			lemma = w.getLemma();
 			
+			mascaraActual += shortTag + " ";
 			/* ****************************** Verbos ************************************ */
 			
 			if (shortTag.startsWith("VMN")) {
@@ -299,6 +294,7 @@ public class NplServiceFreeLingImpl implements NplService {
 				}
 			}
 			
+
 			/* ****************************** Cifras y numerales ************************************ */
 			
 			else if (shortTag.startsWith("Z")){
@@ -321,9 +317,17 @@ public class NplServiceFreeLingImpl implements NplService {
 				// Split input with the pattern
 				//String[] result = p.split("one,two, three   four ,  five");
 				
-				//SimpleDateFormat formatoDeFecha = new SimpleDateFormat(fecha.toString());
+				/*SimpleDateFormat formatoDeFecha = new SimpleDateFormat("dd/MM/yyyy");
+				try {
+					Date fechaFinal = formatoDeFecha.parse("02/12/2012");
+				} catch (ParseException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}*/
 				
-				nplResponse.addData("simpleText", "El resultado es " + fecha);
+				values.put("simpleText", "El resultado es " + fecha);
+				nplResponse.setResponseData(values);
+
 				
 				
 			} else {
@@ -334,9 +338,19 @@ public class NplServiceFreeLingImpl implements NplService {
 		// Fin del FOR
 		//------------------------------------------------------------
 
+		//Ejemplo que como usar REGEX
+		mascaraActual = mascaraActual.trim();
+		log.info("Mascara: " + mascaraActual);
+		if(mascaraActual.matches("(VMN|XXX|ETCETCETC) NC SP W Fp")) {
+			log.info("MATCH de la regex");
+		}
+		
+		
+		
 		// Preguntar si la oracion es valida
 		if (oracion.size() > 0){
 		
+
 			/* Premisas
 			
 			*La oracion tiene que tener un verbo "V"
@@ -388,33 +402,38 @@ public class NplServiceFreeLingImpl implements NplService {
 				} 
 				log.info("SQL Generado: " + sqlActual);
 				int countEntidad = jdbcTemplate.queryForInt(sqlActual);
-				nplResponse.addData("simpleText", "El resultado es " + countEntidad);
+				
+				values.put("simpleText", "El resultado es " + countEntidad);
+				nplResponse.setResponseData(values);
+
 			}
-		}
-		/*
 		} else if (comandoActual.equalsIgnoreCase("listar")) {
-			DataEntity dataEntity = naturalQueryService
-					.findDataEntitieByAlias(entidadActual);
+			DataEntity dataEntity = naturalQueryService.findDataEntitieByAlias(entidadActual);
 			if (dataEntity != null) {
-				sqlActual = "select count(*) from " + dataEntity.getTables();
-				//int countEntidad = jdbcTemplate.queryForInt(sqlActual);
-				nplResponse.addData("simpleText", "El resultado es ");
+				nplResponse.setResponseType("list");
+			
+				sqlActual = "select " + dataEntity.getColummns()  + " from " + dataEntity.getTables();
+				nplResponse.setResponseData(jdbcTemplate.queryForList(sqlActual));
+				//ResultSet resultSet = statement.executeQuery("SELECT * FROM NaturalQueryCommand");
+				//nplResponse.setResponseData(GeneralUtils.resultSetToObjectList(resultSet));
+				
+				
 			}
 
 		} else if (comandoActual.equalsIgnoreCase("graficar")) {
-			DataEntity dataEntity = naturalQueryService
+			/*DataEntity dataEntity = naturalQueryService
 					.findDataEntitieByAlias(entidadActual);
 			if (dataEntity != null) {
 				sqlActual = "select count(*) from " + dataEntity.getTables();
 				//int countEntidad = jdbcTemplate.queryForInt(sqlActual);
 				
 				nplResponse.addData("simpleText", "El resultado es ");
-			}
+			}*/
 
 		}
-		 */
-				
+		 		
 		log.info("Resultado del analize " + nplResponse);
 		return nplResponse;
 	}
+
 }
