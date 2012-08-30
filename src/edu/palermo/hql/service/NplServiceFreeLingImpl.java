@@ -349,14 +349,16 @@ public class NplServiceFreeLingImpl implements NplService {
 			}
 
 		} else if (comandoActual.equalsIgnoreCase("graficar")) {
-			/*DataEntity dataEntity = naturalQueryService
-					.findDataEntitieByAlias(entidadActual);
+			
+			DataEntity dataEntity = naturalQueryService.findDataEntitieByAlias(entidadActual);
 			if (dataEntity != null) {
-				sqlActual = "select count(*) from " + dataEntity.getTables();
-				//int countEntidad = jdbcTemplate.queryForInt(sqlActual);
+				nplResponse.setResponseType("pie-chart");
 				
-				nplResponse.addData("simpleText", "El resultado es ");
-			}*/
+				sqlActual = "select " + dataEntity.getGroupColumn() + ", count(" + dataEntity.getGroupColumn() +") as value"  + " from " + dataEntity.getTables() + " group by " + dataEntity.getGroupColumn();
+				nplResponse.setResponseData(jdbcTemplate.queryForList(sqlActual));
+				
+			}
+			
 
 		}
 		 		
