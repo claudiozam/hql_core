@@ -49,24 +49,7 @@ $(function() {
 			}
 		});
 	
-	$(document).ready(function(){
-		  plot2 = jQuery.jqplot('pieChart',
-		    [[['Verwerkende industrie', 9],['Retail', 0], ['Primaire producent', 0],
-		    ['Out of home', 0],['Groothandel', 0], ['Grondstof', 0], ['Consument', 3], ['Bewerkende industrie', 2]]],
-		    {
-		      title: ' ',
-		      seriesDefaults: {
-		        shadow: false,
-		        renderer: jQuery.jqplot.PieRenderer,
-		        rendererOptions: {
-		          startAngle: 180,
-		          sliceMargin: 4,
-		          showDataLabels: true }
-		      },
-		      legend: { show:true, location: 'w' }
-		    }
-		  );
-		});
+	
 	
 });
 
@@ -86,6 +69,42 @@ function executeAnalize() {
 		        tbl_body += "<tr>"+tbl_row+"</tr>";                 
 		    })
 		    $("#target_table_id").html(tbl_body);
+		} else if(nplResponse.responseType == 'pie-chart') {
+			var data = nplResponse.responseData;
+			var small = new Array();
+			var tmp;
+			var result = new Array();
+			var i = 0;
+			$.each(data, function() {
+			    $.each(this, function(k , v) {
+			    	if (i==0){
+			    		tmp = v;
+			    		i++;
+			    	}
+			    	else{
+			    		small = [tmp,v];
+			    		result.push(small);
+			    		i = 0;
+			    	}
+			    })                
+			})
+
+		    $(document).ready(function(){
+				  plot2 = jQuery.jqplot('pieChart',[big],
+				    {
+				      title: ' ',
+				      seriesDefaults: {
+				        shadow: false,
+				        renderer: jQuery.jqplot.PieRenderer,
+				        rendererOptions: {
+				          startAngle: 180,
+				          sliceMargin: 4,
+				          showDataLabels: true }
+				      },
+				      legend: { show:true, location: 'w' }
+				    }
+				  );
+				});
 		}
 	});
 }
