@@ -103,13 +103,15 @@ public class NplServiceFreeLingImpl implements NplService {
 				analyzeWords.add(w);
 			}
 		}
-		return this.process(analyzeWords);
+		return this.process(analyzeWords, nplRequest);
 	}
 	
-	private NplResponse process(List<Word> analyzeWords) throws HQLException {
+	private NplResponse process(List<Word> analyzeWords, NplRequest nplRequest) throws HQLException {
 
 		HashMap<String , String> values = new HashMap<String, String>();
-		
+
+		boolean isFromMobile = GeneralUtils.checkIsMobile(nplRequest.getUserAgent());
+	
 		String mascaraActual = "";
 		String comandoActual = "";
 		String entidadActual = "";
@@ -338,10 +340,17 @@ public class NplServiceFreeLingImpl implements NplService {
 		} else if (comandoActual.equalsIgnoreCase("listar")) {
 			DataEntity dataEntity = naturalQueryService.findDataEntitieByAlias(entidadActual);
 			if (dataEntity != null) {
-				nplResponse.setResponseType("list");
-			
 				sqlActual = "select " + dataEntity.getColummns()  + " from " + dataEntity.getTables();
-				nplResponse.setResponseData(jdbcTemplate.queryForList(sqlActual));
+				if(!isFromMobile) {
+					nplResponse.setResponseType("list");
+					nplResponse.setResponseData(jdbcTemplate.queryForList(sqlActual));
+				} else {
+					nplResponse.setResponseType("link");
+					values.put("simpleText","Click para ver el Grafico");
+					values.put("url", "/list.html?queryId=" + 34355);
+					//TODO: Me falta guardar la consulta en la base para ejecutar despues.....
+				}
+				
 				//ResultSet resultSet = statement.executeQuery("SELECT * FROM NaturalQueryCommand");
 				//nplResponse.setResponseData(GeneralUtils.resultSetToObjectList(resultSet));
 				
@@ -352,14 +361,20 @@ public class NplServiceFreeLingImpl implements NplService {
 			
 			DataEntity dataEntity = naturalQueryService.findDataEntitieByAlias(entidadActual);
 			if (dataEntity != null) {
-				nplResponse.setResponseType("pie-chart");
-				
 				sqlActual = "select " + dataEntity.getGroupColumn() + ", count(" + dataEntity.getGroupColumn() +") as value"  + " from " + dataEntity.getTables() + " group by " + dataEntity.getGroupColumn();
-				nplResponse.setResponseData(jdbcTemplate.queryForList(sqlActual));
+				if(!isFromMobile) {
+					nplResponse.setResponseType("pie-chart");
+					nplResponse.setResponseData(jdbcTemplate.queryForList(sqlActual));
+				} else {
+					nplResponse.setResponseType("link");
+					values.put("simpleText","Click para ver la lista");
+					values.put("url", "/chart.html?queryId=" + 34355);
+					nplResponse.setResponseData(jdbcTemplate.queryForList(sqlActual));
+					//TODO: Me falta guardar la consulta en la base para ejecutar despues.....
+				}
 				
 			}
 			
-
 		}
 		 		
 		log.info("Resultado del analize " + nplResponse);

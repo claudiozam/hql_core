@@ -27,5 +27,13 @@ public class GeneralUtils {
 
 		return table;
 	}
+	
+	public static boolean checkIsMobile(String userAgent) {
+		if(userAgent.equalsIgnoreCase("Android")) {
+			return true;
+		}
+		return false;
+	}
+	
 
 }

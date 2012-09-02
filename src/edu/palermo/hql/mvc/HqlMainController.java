@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import edu.palermo.hql.bo.AutoCompleteItem;
@@ -33,6 +34,15 @@ public class HqlMainController {
 		return "/hqlmain/index";
 	}
 	
+	@RequestMapping(value="/chart", method=RequestMethod.GET)
+	public String chart(@RequestParam Long queryId) {
+		return "/hqlmain/chart";
+	}
+	
+	@RequestMapping(value="/list", method=RequestMethod.GET)
+	public String list(@RequestParam Long queryId) {
+		return "/hqlmain/list";
+	}
 
 	@ResponseBody
 	@RequestMapping(value="/autocomplete_natural_query_commands", method=RequestMethod.GET)
