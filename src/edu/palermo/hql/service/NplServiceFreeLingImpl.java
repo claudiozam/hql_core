@@ -1,9 +1,10 @@
 package edu.palermo.hql.service;
-import java.sql.*;
-import java.text.ParseException;
+
+import java.sql.Date;
 import java.text.SimpleDateFormat;
-import java.util.*;
-import java.util.Date;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 
 import javax.sql.DataSource;
 
@@ -12,43 +13,57 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
+//import com.sun.org.apache.xerces.internal.impl.xpath.regex.ParseException;
+
 import edu.palermo.hql.bo.DataEntity;
 import edu.palermo.hql.bo.NplRequest;
 import edu.palermo.hql.bo.NplResponse;
 import edu.palermo.hql.general.GeneralUtils;
-import edu.upc.freeling.*;
+import edu.upc.freeling.ChartParser;
+import edu.upc.freeling.DepTxala;
+import edu.upc.freeling.HmmTagger;
+import edu.upc.freeling.ListSentence;
+import edu.upc.freeling.ListWord;
+import edu.upc.freeling.Maco;
+import edu.upc.freeling.MacoOptions;
+import edu.upc.freeling.Nec;
+import edu.upc.freeling.Sentence;
+import edu.upc.freeling.Splitter;
+import edu.upc.freeling.Tokenizer;
+import edu.upc.freeling.UkbWrap;
+import edu.upc.freeling.Util;
+import edu.upc.freeling.Word;
 
 @Component
 public class NplServiceFreeLingImpl implements NplService {
-	
+
 	private static Logger log = Logger.getLogger(NplServiceFreeLingImpl.class);
 
 	private static final String FREELINGDIR = "/usr/local";
 	private static final String DATA = FREELINGDIR + "/share/freeling/";
 	private static final String LANG = "es";
-	
+
 	private Tokenizer tk;
 	private Splitter sp;
 	private Maco mf;
 	private HmmTagger tg;
 	private Nec neclass;
-	
+
 	@Autowired
 	private DataSource dataSource;
-	
+
 	@Autowired
 	private NaturalQueryService naturalQueryService;
-	
+
 	public NplServiceFreeLingImpl() {
 		init();
 	}
-	
+
 	private void init() {
 		log.info("Cargando freeling.....");
-		//System.loadLibrary("libfreeling_javaAPI");
+		// System.loadLibrary("libfreeling_javaAPI");
 		System.load("/home/hql/myfreeling/APIs/java/libfreeling_javaAPI.so");
-		
-		
+
 		Util.initLocale("default");
 
 		MacoOptions op = new MacoOptions(LANG);
@@ -64,104 +79,104 @@ public class NplServiceFreeLingImpl implements NplService {
 
 		tk = new Tokenizer(DATA + LANG + "/tokenizer.dat");
 		sp = new Splitter(DATA + LANG + "/splitter.dat");
-		
+
 		mf = new Maco(op);
 
 		tg = new HmmTagger(LANG, DATA + LANG + "/tagger.dat", true, 2);
 		ChartParser parser = new ChartParser(DATA + LANG
 				+ "/chunker/grammar-chunk.dat");
-		
+
 		DepTxala dep = new DepTxala(DATA + LANG + "/dep/dependences.dat",
 				parser.getStartSymbol());
-		
+
 		neclass = new Nec(DATA + LANG + "/nec/nec-ab.dat");
 
 		UkbWrap dis = new UkbWrap(DATA + LANG + "/ukb.dat");
-		
+
 		log.info("Freeling cargado");
-		
 
 	}
+
 	@Override
-	public synchronized NplResponse analize(NplRequest nplRequest) throws HQLException {
+	public synchronized NplResponse analize(NplRequest nplRequest)
+			throws HQLException {
 		log.info("Ejecutando analize " + nplRequest);
-		
+
 		ListWord l = tk.tokenize(nplRequest.getText());
 		ListSentence ls = sp.split(l, false);
 		mf.analyze(ls);
 		tg.analyze(ls);
 		neclass.analyze(ls);
-		
+
 		List<Word> analyzeWords = new ArrayList<Word>();
-		
+
 		for (int i = 0; i < ls.size(); i++) {
-			//Por el momento solo trabajamos con una sola sentence....
+			// Por el momento solo trabajamos con una sola sentence....
 			Sentence s = ls.get(i);
 			for (int j = 0; j < s.size(); j++) {
 				Word w = s.get(j);
-				log.info("Word: " + w.getForm() + " Lc: " + w.getLcForm() + " Lemma: " + w.getLemma() +  " Tag: " + w.getTag() + " ShortTag: " + w.getShortTag());
+				log.info("Word: " + w.getForm() + " Lc: " + w.getLcForm()
+						+ " Lemma: " + w.getLemma() + " Tag: " + w.getTag()
+						+ " ShortTag: " + w.getShortTag());
 				analyzeWords.add(w);
 			}
 		}
 		return this.process(analyzeWords, nplRequest);
 	}
-	
-	private NplResponse process(List<Word> analyzeWords, NplRequest nplRequest) throws HQLException {
 
-		HashMap<String , String> values = new HashMap<String, String>();
+	private NplResponse process(List<Word> analyzeWords, NplRequest nplRequest)
+			throws HQLException {
 
-		boolean isFromMobile = GeneralUtils.checkIsMobile(nplRequest.getUserAgent());
-	
+		HashMap<String, String> values = new HashMap<String, String>();
+
+		boolean isFromMobile = GeneralUtils.checkIsMobile(nplRequest
+				.getUserAgent());
+
 		String mascaraActual = "";
 		String comandoActual = "";
 		String entidadActual = "";
-		String filtroActual = "";
+		// String filtroActual = "";
 		String shortTag = "";
 		String form = "";
-		
+
 		String sqlActual = "";
-		
+
 		String tag = "";
 		String lemma = "";
-		ArrayList<String> oracion = new ArrayList<String>();
-		
-		/*
-		Array con palabras de tipo nombres 
-		
-		Ej. "contar [alumnos] de la [carrera] de [informatica]."
-		
-		nombres.get(0) = entidad (alumnos)
-		nombres.get(1) = campo where  (carrera)
-		nombres.get(2) = valor buscado (informatica)
-		*/ 
-		ArrayList<String> nombres = new ArrayList<String>();
 
-		
+		ArrayList<String> fechas = new ArrayList<String>();
+		ArrayList<String> nombres = new ArrayList<String>();
+		ArrayList<String> operadores = new ArrayList<String>();
+		ArrayList<String> camposOrderBy = new ArrayList<String>();
+		ArrayList<Integer> valoresNumericos = new ArrayList<Integer>();
+
+		boolean requiereOrderBy = false;
+
+		// -----------------------------------------------------------
+
 		NplResponse nplResponse = new NplResponse();
 		long id = 12345678;
 		nplResponse.setId(id);
 		nplResponse.setResponseType("text");
-		values.put("simpleText", "La consulta no pudo ser ejecutada");
 		nplResponse.setResponseData(values);
-		
+
 		JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
-				
-		/* 
-			String desc = (String) jdbcTemplate
-				    .queryForObject("select p.desc from position1 p where p.value = ?", 
-				    		new Object[]{tag.substring(0, 1)}, String.class);
-		*/
-		
+
+		// ----------------------------------------------------------------------------------
+		// Comienzo del FOR
+		// ----------------------------------------------------------------------------------
 		for (Word w : analyzeWords) {
-			shortTag = w.getShortTag();
-			form = w.getForm();
-			
+
 			tag = w.getTag();
+			form = w.getForm();
 			lemma = w.getLemma();
-			
+			shortTag = w.getShortTag();
+
 			mascaraActual += shortTag + " ";
-			/* ****************************** Verbos ************************************ */
-			
+			/*
+			 *  ****************************** Verbos
+			 * ************************************
+			 */
 			if (shortTag.startsWith("VMN")) {
 				if (form.equalsIgnoreCase("listar")) {
 					comandoActual = "listar";
@@ -169,216 +184,323 @@ public class NplServiceFreeLingImpl implements NplService {
 					comandoActual = "graficar";
 				} else if (form.equalsIgnoreCase("contar")) {
 					comandoActual = "contar";
-				}				
-			}
-			
-			/* ****************************** Preposiciones ************************************ */
-			
-			else if (shortTag.startsWith("S")) {
-				if (tag.startsWith("SPS00")){
-					// "de" = separador de nombres
-					
+				}
+			} else if (shortTag.startsWith("VMP")) {
+				if (lemma.equalsIgnoreCase("ordenar")) {
+					// Flag para avisar que los proximos "N" son campos del
+					// ORDER BY
+					requiereOrderBy = true;
+				}
+			} else if (shortTag.startsWith("VSI")) {
+				if (form.equalsIgnoreCase("es")) {
 				}
 			}
-			
-			/* ****************************** Nombres ************************************ */
-			
+			/*
+			 *  ****************************** Nombres
+			 * ***********************************
+			 */
 			else if (shortTag.startsWith("N")) {
-
-				if (shortTag.startsWith("NC")){
-					// Nombres Comunes
-					// Posibles entidades!!!
-
-					// Si el Array esta vacio entonces es el primer "NC" y por lo tanto es la entidad
-					// Tambien deberiamos considerar que no haya un "de" delante (Ej. alumnos [de] la facultad...)
-					if (nombres.isEmpty()){
-						// Guardo el nombre de la entidad
-						entidadActual = form;
-					}
-
-				} else if (shortTag.startsWith("NP")){
-					// Nombres Propios
-					// Posibles filtros del WHERE
-					
-					// NP000G0    Lugar (ej. Barcelona) 
-					// NP000P0    Nombre propio (ej. Pedro)
-					// NP000O0    organizacion (ej. UNICEF)
+				// Si es el primer "N" entonces lo guardo como nombre de la
+				// entidad
+				if (nombres.isEmpty()) {
+					entidadActual = form;
 				}
-				
-				// Agrego todas las palabras de tipo N al Array de nombres 
-				nombres.add(form);
+				// Pregunto si previamente se proceso la palabra "ordenar"
+				// En caso de ser TRUE empiezo a guardar los campos del ORDER BY
+				// en otro ArrayList
+				if (requiereOrderBy == true) {
+					camposOrderBy.add(form);
+				} else {
+					nombres.add(form);
+				}
 			}
-			
-			/* ****************************** Pronombres ************************************ */
-			
-			else if (shortTag.startsWith("P")){
-
-				if (shortTag.startsWith("PI")){
-					// Pronombres Indefinidos					
+			/*
+			 *  *************************** Preposiciones
+			 * ********************************
+			 */
+			else if (shortTag.startsWith("S")) {
+				if (form.equalsIgnoreCase("de")) {
+					if (nombres.size() == 2) {
+						operadores.add(" = ");
+					}
 				}
-				else if (shortTag.startsWith("PT")){
-					// Pronombres Interrogativos
+				if (tag.startsWith("SPS00")) {
+					if (form.equalsIgnoreCase("a")) {
+					} else if (form.equalsIgnoreCase("con")) {
+					} else if (form.equalsIgnoreCase("hasta")) {
+						operadores.add(" <= ");
+					} else if (form.equalsIgnoreCase("desde")) {
+						operadores.add(" >= ");
+					} else if (form.equalsIgnoreCase("entre")) {
+					} else if (form.equalsIgnoreCase("en")) {
+						// operadores.add(" IN ");
+					} else if (form.equalsIgnoreCase("por")) {
+					}
 				}
-				else if (shortTag.startsWith("PR")){
+			}
+			/*
+			 *  ***************************** Adjetivos
+			 * **********************************
+			 */
+			else if (shortTag.startsWith("A")) {
+				// Operadores de condicion
+				if (form.equalsIgnoreCase("igual")) {
+					operadores.add(" = ");
+				} else if (form.equalsIgnoreCase("mayor")) {
+					operadores.add(" > ");
+				} else if (form.equalsIgnoreCase("menor")) {
+					operadores.add(" < ");
+				}
+			}
+			/*
+			 *  **************************** Pronombres
+			 * **********************************
+			 */
+			else if (shortTag.startsWith("P")) {
+				if (shortTag.startsWith("PI")) {
+				} else if (shortTag.startsWith("PT")) {
+				} else if (shortTag.startsWith("PR")) {
 					// Pronombres Relativos
-					// Posibles tipos de filtro para where (ej cuales, cuantos, quienes, donde)
-					
+					// Posibles tipos de filtro para where (ej cuales, cuantos,
+					// quienes, donde)
+					if (form.equalsIgnoreCase("donde")) {
+						// El "donde" es equivalenle al "de" (nos avisa que la
+						// consulta debe estar filtrada)
+					}
 				}
-				
 			}
-			 
-			/* ****************************** Conjunciones ************************************ */
-			
+			/*
+			 *  *************************** Conjunciones
+			 * *********************************
+			 */
 			else if (shortTag.startsWith("C")) {
-
 				if (shortTag.startsWith("CS")) {
-					
-				}
-				else if (shortTag.startsWith("CC")){
-					if (form.equalsIgnoreCase("y")){
-						// Agregar un AND a la consulta
-					}
-					else if (form.equalsIgnoreCase("o")){
-						// Agregar un OR a la consulta
+				} else if (shortTag.startsWith("CC")) {
+					// Operadores logicos
+					if (form.equalsIgnoreCase("y")) {
+						operadores.add(" AND ");
+					} else if (form.equalsIgnoreCase("e")) {
+						operadores.add(" AND ");
+					} else if (form.equalsIgnoreCase("o")) {
+						operadores.add(" OR ");
+					} else if (form.equalsIgnoreCase("u")) {
+						operadores.add(" OR ");
 					}
 				}
 			}
-			
-
-			/* ****************************** Cifras y numerales ************************************ */
-			
-			else if (shortTag.startsWith("Z")){
-
+			/*
+			 *  ************************ Cifras y Numerales
+			 * ******************************
+			 */
+			else if (shortTag.startsWith("Z")) {
+				valoresNumericos.add(Integer.parseInt(lemma));
 			}
-			
-			/* ****************************** Fechas ************************************ */
-			
+			/*
+			 *  ****************************** Fechas
+			 * ************************************
+			 */
 			else if (shortTag.startsWith("W")) {
-				// [V:26:09:1992:03.00:pm]
-				String regex = "[\\[LMJVSD]:\\d{2}:\\d{2}:\\d{4}:\\d{2}.\\d{2}:[a-pm]$";
-				//ArrayList<String> fecha = new ArrayList<String>();
-				String fecha[] = null; 
-				if (lemma.matches(regex)){
-					fecha = lemma.split(regex);
-				}
-				
-				// Create a pattern to match breaks
-				//Pattern p = Pattern.compile("[,\\s]+");
-				// Split input with the pattern
-				//String[] result = p.split("one,two, three   four ,  five");
-				
-				/*SimpleDateFormat formatoDeFecha = new SimpleDateFormat("dd/MM/yyyy");
-				try {
-					Date fechaFinal = formatoDeFecha.parse("02/12/2012");
-				} catch (ParseException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}*/
-				
-				values.put("simpleText", "El resultado es " + fecha);
-				nplResponse.setResponseData(values);
+				String[] arrayFecha = lemma.replace("([|])", "").split(":");
+				// Tengo que mejorar esta parte
+				// No me di cuenta y borre la parte donde estaba el ejemplo de
+				// SimpleDateFormat
+				for (int i = 0; i < arrayFecha.length; i++) {
+					if (i == 1) {
 
-				
-				
-			} else {
+						// La posicion 1 tiene la fecha en formato ??/mm/yyyy
+						String s = arrayFecha[1].replace("??", "01").toString();
+
+						log.info("Fecha: " + s);
+
+						String[] f = s.split("/");
+						if (f[1].length() == 1) {
+							f[1] = '0' + f[1];
+						}
+						String fechaFormateada = f[2] + "-" + f[1] + "-" + f[0];
+						fechas.add(fechaFormateada);
+						log.info("Fecha: " + fechas.get(0));
+					}
+				}
+			}
+			/* ************************************************************************** */
+			else {
 				log.warn("No se puede procesar la palabra: " + form
 						+ " short tag: " + shortTag);
 			}
 		}
+		// ----------------------------------------------------------------------------------
 		// Fin del FOR
-		//------------------------------------------------------------
+		// ----------------------------------------------------------------------------------
 
-		//Ejemplo que como usar REGEX
-		mascaraActual = mascaraActual.trim();
-		log.info("Mascara: " + mascaraActual);
-		if(mascaraActual.matches("(VMN|XXX|ETCETCETC) NC SP W Fp")) {
-			log.info("MATCH de la regex");
-		}
-		
-		
-		
-		// Preguntar si la oracion es valida
-		if (oracion.size() > 0){
-		
+		/*
+		 * Tipos de oraciones validas
+		 * 
+		 * Lista alumnos Lista alumnos donde carrera es igual a medicina Listar
+		 * alumnos ordenado por legajo Contar alumnos Listar productos donde el
+		 * precio es mayor a 10000 Contar inscriptos desde enero del 2012 hasta
+		 * abril del 2013
+		 */
 
-			/* Premisas
-			
-			*La oracion tiene que tener un verbo "V"
-			*La oracion tiene que tener al menos una palabra de tipo nombre "N"
-			*Si la oracion tiene un "CC" igual a la conjuncion "y" entonces hay que agregar a la consulta un AND
-			*Si la oracion tiene un "CC" igual a la conjuncion "o" entonces hay que agregar a la consulta un OR
-			*La preposicion "SPS00" ("de") es nuestro separador de nombres "N" 
-			
-			 for (String palabra : oracion) {
-				
-			}
-			*/
-			 
-			
-		}
-		
 		// ya tengo las palabras base ahora tengo que hacer la consulta......
 		// ?????????????????????????????????????????????????????????????????
-				
-		if (comandoActual.equalsIgnoreCase("contar")) {
+		if (comandoActual != "") {
 			DataEntity dataEntity = naturalQueryService
 					.findDataEntitieByAlias(entidadActual);
 			if (dataEntity != null) {
-				int sizeArray = nombres.size();
-				
-				sqlActual = "select count(" + dataEntity.getCountColumn() + ") from " + dataEntity.getTables();
-				if (sizeArray >= 3 ){
-					sqlActual += " where " + nombres.get(1).toString() + " = '" + nombres.get(2).toString() + "'";
-				} 
-				log.info("SQL Generado: " + sqlActual);
-				int countEntidad = jdbcTemplate.queryForInt(sqlActual);
-				
-				values.put("simpleText", "El resultado es " + countEntidad);
-				nplResponse.setResponseData(values);
+				mascaraActual = mascaraActual.trim();
+				log.info("Mascara: " + mascaraActual);
+				/*
+				 *  **************************** GenerateSQL
+				 * *********************************
+				 */
+				sqlActual = this.GenerateSQL(comandoActual, mascaraActual,
+						dataEntity, nombres, operadores, valoresNumericos,
+						camposOrderBy, fechas);
+				/* ************************************************************************** */
+				if (sqlActual != null) {
+					if (comandoActual.equalsIgnoreCase("contar")) {
+						log.info("SQL Generado: " + sqlActual);
+						int countEntidad = jdbcTemplate.queryForInt(sqlActual);
+						values.put("simpleText", "El resultado es "
+								+ countEntidad);
+						nplResponse.setResponseData(values);
+					} else if (comandoActual.equalsIgnoreCase("listar")) {
+						nplResponse.setResponseType("list");
+						if (!isFromMobile) {
+							nplResponse.setResponseData(jdbcTemplate
+									.queryForList(sqlActual));
+						} else {
+							nplResponse.setResponseType("link");
+							values.put("simpleText", "Click para ver la lista");
+							values.put("url", "/list.html?queryId=" + 34355);
+							// TODO: Me falta guardar la consulta en la base
+							// para ejecutar despues.....
+						}
 
-			}
-		} else if (comandoActual.equalsIgnoreCase("listar")) {
-			DataEntity dataEntity = naturalQueryService.findDataEntitieByAlias(entidadActual);
-			if (dataEntity != null) {
-				sqlActual = "select " + dataEntity.getColummns()  + " from " + dataEntity.getTables();
-				if(!isFromMobile) {
-					nplResponse.setResponseType("list");
-					nplResponse.setResponseData(jdbcTemplate.queryForList(sqlActual));
-				} else {
-					nplResponse.setResponseType("link");
-					values.put("simpleText","Click para ver el Grafico");
-					values.put("url", "/list.html?queryId=" + 34355);
-					//TODO: Me falta guardar la consulta en la base para ejecutar despues.....
-				}
-				
-				//ResultSet resultSet = statement.executeQuery("SELECT * FROM NaturalQueryCommand");
-				//nplResponse.setResponseData(GeneralUtils.resultSetToObjectList(resultSet));
-				
-				
-			}
+					} else if (comandoActual.equalsIgnoreCase("graficar")) {
 
-		} else if (comandoActual.equalsIgnoreCase("graficar")) {
-			
-			DataEntity dataEntity = naturalQueryService.findDataEntitieByAlias(entidadActual);
-			if (dataEntity != null) {
-				sqlActual = "select " + dataEntity.getGroupColumn() + ", count(" + dataEntity.getGroupColumn() +") as value"  + " from " + dataEntity.getTables() + " group by " + dataEntity.getGroupColumn();
-				if(!isFromMobile) {
-					nplResponse.setResponseType("pie-chart");
-					nplResponse.setResponseData(jdbcTemplate.queryForList(sqlActual));
+						nplResponse.setResponseType("pie-chart");
+						sqlActual = "select " + dataEntity.getGroupColumn()
+								+ ", count(" + dataEntity.getGroupColumn()
+								+ ") as value" + " from "
+								+ dataEntity.getTables() + " group by "
+								+ dataEntity.getGroupColumn();
+						if (!isFromMobile) {
+							nplResponse.setResponseType("pie-chart");
+							nplResponse.setResponseData(jdbcTemplate
+									.queryForList(sqlActual));
+						} else {
+							nplResponse.setResponseType("link");
+							values.put("simpleText", "Click para ver la lista");
+							values.put("url", "/chart.html?queryId=" + 34355);
+							nplResponse.setResponseData(jdbcTemplate
+									.queryForList(sqlActual));
+							// TODO: Me falta guardar la consulta en la base
+							// para ejecutar despues.....
+						}
+
+					}
 				} else {
-					nplResponse.setResponseType("link");
-					values.put("simpleText","Click para ver la lista");
-					values.put("url", "/chart.html?queryId=" + 34355);
-					nplResponse.setResponseData(jdbcTemplate.queryForList(sqlActual));
-					//TODO: Me falta guardar la consulta en la base para ejecutar despues.....
+					values.put("simpleText", "La consulta no pudo ser ejecutada");
+
 				}
-				
 			}
-			
+		} else {
+			values.put("simpleText", "No se ingreso un comando correcto");
+
 		}
-		 		
+
 		log.info("Resultado del analize " + nplResponse);
 		return nplResponse;
 	}
 
+	private String GenerateSQL(String command, String mask,
+			DataEntity dataEntity, ArrayList<String> nombres,
+			ArrayList<String> operadores, ArrayList<Integer> valoresNumericos,
+			ArrayList<String> camposOrderBy, ArrayList<String> fechas) {
+
+		String sql = "";
+
+		int sizeFechas = fechas.size();
+		int sizeNombres = nombres.size();
+		int sizeOperadores = operadores.size();
+		int sizeCamposOrderBy = camposOrderBy.size();
+		int sizeValoresNumericos = valoresNumericos.size();
+
+		/* *************************** SELECT **************************** */
+		// Identifico el tipo de comando
+		if (command.equalsIgnoreCase("listar")) {
+			sql = "SELECT " + dataEntity.getColummns() + " ";
+		} else if (command.equalsIgnoreCase("contar")) {
+			sql = "SELECT COUNT(" + dataEntity.getCountColumn() + ") ";
+		}
+		/* **************************** FROM ***************************** */
+		sql += " FROM " + dataEntity.getTables();
+		/* **************************** WHERE **************************** */
+		// Identifico el tipo de mascara
+		if (mask.matches("VMN NC Fp")) {
+			// listar alumnos
+			// NO hace falta modificar la variable sql debido a que se guardaria
+			// lo mismo que tiene cargado
+			return sql;
+		} else if (mask
+				.matches("VMN NC (PR|S) NC VSI AQ SP (NC|NP|Z|W) (Fp|VMP SP NC Fp)")) {
+			// listar Nombre[0] donde Nombre[1] es igual a Nombre[2]
+			if (sizeNombres >= 2 && sizeOperadores >= 1) {
+				sql += " where " + nombres.get(1).toString() + " "
+						+ operadores.get(0).toString();
+				if (sizeNombres >= 3) {
+					// Campo VARCHAR
+					sql += " '" + nombres.get(2).toString() + "'";
+				} else if (sizeValoresNumericos == 1) {
+					// Campo INTEGER
+					sql += " " + valoresNumericos.get(0).toString();
+				} else if (sizeFechas == 1) {
+					// Campo DATE
+					sql += " '" + fechas.get(0).toString() + "'";
+				}
+			}
+		} else if (mask.matches("VMN NC SP DA NC SP (NP|NC) Fp")) {
+			// listar Nombre[0] de la Nombre[1] de Nombre[2]
+			if (sizeNombres >= 2 && sizeOperadores >= 1) {
+				// WHERE [campo] [operador]
+				sql += " where " + nombres.get(1).toString() + " "
+						+ operadores.get(0).toString();
+				if (sizeNombres >= 3) {
+					// Campo VARCHAR
+					sql += " '" + nombres.get(2).toString() + "'";
+				} else if (sizeValoresNumericos == 1) {
+					// Campo INTEGER
+					sql += " " + valoresNumericos.get(0).toString();
+				} else if (sizeFechas == 1) {
+					// Campo DATE
+					sql += " '" + fechas.get(0).toString() + "'";
+				}
+			}
+		} else if (mask.matches("VMN NC VMP SP NC Fp")) {
+			// Listar alumnos ordenado por legajo
+			if (sizeCamposOrderBy >= 1 && sizeOperadores == 0) {
+				sql += " order by ";
+				for (int i = 0; i < camposOrderBy.size(); i++) {
+					sql += camposOrderBy.get(i).toString();
+				}
+			}
+		} else {
+			sql = null;
+		}
+		/* *************************** GROUP BY *************************** */
+
+		/* *************************** ORDER BY *************************** */
+		if (sizeCamposOrderBy >= 1 && sizeOperadores >= 1 && sql != null) {
+			sql += " order by ";
+			for (int i = 0; i < camposOrderBy.size(); i++) {
+				sql += camposOrderBy.get(i).toString();
+			}
+		}
+		/* *************************************************************** */
+
+		log.info("SQL Generado: " + sql);
+
+		return sql;
+	}
 }
