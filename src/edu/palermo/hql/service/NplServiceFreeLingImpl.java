@@ -371,18 +371,23 @@ public class NplServiceFreeLingImpl implements NplService {
 				//nplResponse.setResponseData(GeneralUtils.resultSetToObjectList(resultSet));
 			}
 		 
-		} else if (comandoActual.equalsIgnoreCase("graficar")) {
-			/*DataEntity dataEntity = naturalQueryService
-					.findDataEntitieByAlias(entidadActual);
+		} else 
+		*/	
+		if (comandoActual.equalsIgnoreCase("graficar")) {
+			
+			DataEntity dataEntity = naturalQueryService.findDataEntitieByAlias(entidadActual);
 			if (dataEntity != null) {
-				sqlActual = "select count(*) from " + dataEntity.getTables();
-				//int countEntidad = jdbcTemplate.queryForInt(sqlActual);
+				nplResponse.setResponseType("pie-chart");
 				
-				nplResponse.addData("simpleText", "El resultado es ");
+				//nplResponse.addData("simpleText", "El resultado es ");
 			}
-
+				sqlActual = "select " + dataEntity.getGroupColumn() + ", count(" + dataEntity.getGroupColumn() +") as value"  + " from " + dataEntity.getTables() + " group by " + dataEntity.getGroupColumn();
+				nplResponse.setResponseData(jdbcTemplate.queryForList(sqlActual));
+				
+			}
+		/*
 		}
-		 	*/	
+		 */	
 		log.info("Resultado del analize " + nplResponse);
 		return nplResponse;
 	}
