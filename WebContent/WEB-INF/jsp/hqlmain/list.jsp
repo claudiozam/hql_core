@@ -17,20 +17,15 @@
       <script type="text/javascript" src="<c:url value="/js/jquery.jqplot.min.js" />"></script>    
       <script type="text/javascript" src="<c:url value="/js/jqplot.pieRenderer.min.js" />"></script>
       <script type="text/javascript" src="<c:url value="/js/my_jquery.js" />"></script>
+
+  </head>
+
+  <body>
     <script type="text/javascript">
     	$(function() {
     		executeList(${queryId});
     	});
     </script>
-    <!-- Le HTML5 shim, for IE6-8 support of HTML5 elements -->
-    <!--[if lt IE 9]>
-      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
-    <![endif]-->
-
-  </head>
-
-  <body>
-
 
     <div class="container">
 
