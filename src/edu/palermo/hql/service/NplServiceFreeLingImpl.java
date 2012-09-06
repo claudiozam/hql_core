@@ -4,15 +4,13 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-
+import java.text.ParseException;
 import javax.sql.DataSource;
 
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
-
-import com.sun.org.apache.xerces.internal.impl.xpath.regex.ParseException;
 
 import edu.palermo.hql.bo.DataEntity;
 import edu.palermo.hql.bo.NplRequest;
@@ -138,8 +136,10 @@ public class NplServiceFreeLingImpl implements NplService {
 		
 		ArrayList<String> fechas = new ArrayList<String>();
 		ArrayList<String> nombres = new ArrayList<String>();
+		ArrayList<String> funciones = new ArrayList<String>();
 		ArrayList<String> operadores = new ArrayList<String>();
 		ArrayList<String> camposOrderBy = new ArrayList<String>();
+		ArrayList<String> signoPuntuacion = new ArrayList<String>();
 		ArrayList<Integer> valoresNumericos = new ArrayList<Integer>();
 		
 		boolean requiereOrderBy = false;
@@ -174,7 +174,12 @@ public class NplServiceFreeLingImpl implements NplService {
 					comandoActual = "graficar";
 				} else if (form.equalsIgnoreCase("contar")) {
 					comandoActual = "contar";
+					funciones.add("COUNT");
+				} else if (form.equalsIgnoreCase("sumar")) {
+					//comandoActual = "sumar";
+					funciones.add("SUM");
 				}
+				
 			} else if(shortTag.startsWith("VMP")){
 				if (lemma.equalsIgnoreCase("ordenar")){
 					// Flag para avisar que los proximos "N" son campos del ORDER BY
@@ -252,18 +257,19 @@ public class NplServiceFreeLingImpl implements NplService {
 				if (shortTag.startsWith("CS")) {}
 				else if (shortTag.startsWith("CC")){
 					// Operadores logicos
-					if (form.equalsIgnoreCase("y")){
+					if (form.equalsIgnoreCase("y") || form.equalsIgnoreCase("e")){
 						operadores.add(" AND ");
 					}
-					else if (form.equalsIgnoreCase("e")){
-						operadores.add(" AND ");
-					}
-					else if (form.equalsIgnoreCase("o")){
+					else if (form.equalsIgnoreCase("o") || form.equalsIgnoreCase("u")){
 						operadores.add(" OR ");
 					}
-					else if (form.equalsIgnoreCase("u")){
-						operadores.add(" OR ");
-					}
+				}
+			}
+			/* *********************** Signos de Puntuacion ***************************** */
+			else if (shortTag.startsWith("F")){
+				if (shortTag.startsWith("Fc")){	
+					// Coma (,)
+					signoPuntuacion.add(", ");
 				}
 			}
 			/* ************************ Cifras y Numerales ****************************** */
@@ -272,12 +278,13 @@ public class NplServiceFreeLingImpl implements NplService {
 			}
 			/* ****************************** Fechas ************************************ */
 			else if (shortTag.startsWith("W")) {
+				
 				String[] arrayFecha = lemma.replace("([|])", "").split(":");
 				// Tengo que mejorar esta parte
 				// No me di cuenta y borre la parte donde estaba el ejemplo de SimpleDateFormat 
 				for (int i = 0; i < arrayFecha.length; i++) {
 					if (i == 1){
-						
+						/*
 						// La posicion 1 tiene la fecha en formato ??/mm/yyyy
 						String s = arrayFecha[1].replace("??", "01").toString();
 						
@@ -290,8 +297,29 @@ public class NplServiceFreeLingImpl implements NplService {
 						String fechaFormateada = f[2] + "-" + f[1] + "-" + f[0];
 						fechas.add(fechaFormateada);
 						log.info("Fecha: " + fechas.get(0));
+						*/
+						/*
+						arrayFecha[1] = arrayFecha[1].replace("??", "01").toString();
+						String[] f = arrayFecha[1].split("/");
+						if (f[1].length() == 1){
+							f[1] = '0' + f[1];
+						}
+						*/
+						SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+						log.info("Fecha: " + arrayFecha[1].toString());
+				        try {
+				        	Date now = (Date) new java.util.Date(20080402);
+				            //Date parseDate = (Date) format.parse(arrayFecha[1].toString());
+				            Date parseDate = (Date) format.parse(now.toString());
+				            fechas.add(parseDate.toString());
+				            log.info("Fecha: " + fechas.get(0).toString());
+				        } 
+				        catch (ParseException e) {
+				        	log.info("Fecha: " + arrayFecha[1].toString());
+				        }
 					}
 				}
+
 			}
 			/* ************************************************************************** */
 			else {
@@ -320,9 +348,9 @@ public class NplServiceFreeLingImpl implements NplService {
 			if (dataEntity != null) {
 				mascaraActual = mascaraActual.trim();
 				log.info("Mascara: " + mascaraActual);		
-				/* **************************** GenerateSQL ********************************* */
-				sqlActual = GenerateSQL(comandoActual, mascaraActual, dataEntity, 
-						nombres, operadores, valoresNumericos, camposOrderBy, fechas);
+				/* **************************** generateSQL ********************************* */
+				sqlActual = this.generateSQL(comandoActual, mascaraActual, dataEntity, 
+						nombres, operadores, valoresNumericos, camposOrderBy, fechas, funciones);
 				/* ************************************************************************** */
 				if (sqlActual != null){
 					if (comandoActual.equalsIgnoreCase("contar")) {
@@ -333,7 +361,11 @@ public class NplServiceFreeLingImpl implements NplService {
 					} else if (comandoActual.equalsIgnoreCase("listar")) {
 						nplResponse.setResponseType("list");
 						nplResponse.setResponseData(jdbcTemplate.queryForList(sqlActual));			
-					} 
+					}
+					if (comandoActual.equalsIgnoreCase("graficar")) {
+						nplResponse.setResponseType("pie-chart");
+						nplResponse.setResponseData(jdbcTemplate.queryForList(sqlActual));
+					}
 				} else{
 					nplResponse.setResponseData("No se pudo generar la consulta SQL");
 				}
@@ -342,58 +374,13 @@ public class NplServiceFreeLingImpl implements NplService {
 			nplResponse.setResponseData("No se ingreso un comando valido");
 		}
 		// ?????????????????????????????????????????????????????????????????
-		
-		/*
-		if (comandoActual.equalsIgnoreCase("contar")) {
-			DataEntity dataEntity = naturalQueryService.findDataEntitieByAlias(entidadActual);
-			if (dataEntity != null) {
-				int sizeArray = nombres.size();
-				sqlActual = "select count(" + dataEntity.getCountColumn() + ") from " + dataEntity.getTables();
-				if (sizeArray >= 3 ){
-					sqlActual += " where " + nombres.get(1).toString() + " = '" + nombres.get(2).toString() + "'";
-				} 
-				log.info("SQL Generado: " + sqlActual);
-				int countEntidad = jdbcTemplate.queryForInt(sqlActual);
-				values.put("simpleText", "El resultado es " + countEntidad);
-				nplResponse.setResponseData(values);
-			}
-		} else if (comandoActual.equalsIgnoreCase("listar")) {
-			DataEntity dataEntity = naturalQueryService.findDataEntitieByAlias(entidadActual);
-			if (dataEntity != null) {
-				int sizeNombres = nombres.size();
-				int sizeOperadores = operadores.size();
-				nplResponse.setResponseType("list");
-				if (sizeNombres >= 3 && sizeOperadores >= 1){
-					sql += " where " + nombres.get(1).toString() + " " + operadores.get(0).toString()  + " '" + nombres.get(2).toString() + "'";			
-				}
-				nplResponse.setResponseData(jdbcTemplate.queryForList(sqlActual));
-				//ResultSet resultSet = statement.executeQuery("SELECT * FROM NaturalQueryCommand");
-				//nplResponse.setResponseData(GeneralUtils.resultSetToObjectList(resultSet));
-			}
-		 
-		} else 
-		*/	
-		if (comandoActual.equalsIgnoreCase("graficar")) {
 			
-			DataEntity dataEntity = naturalQueryService.findDataEntitieByAlias(entidadActual);
-			if (dataEntity != null) {
-				nplResponse.setResponseType("pie-chart");
-				
-				//nplResponse.addData("simpleText", "El resultado es ");
-			}
-				sqlActual = "select " + dataEntity.getGroupColumn() + ", count(" + dataEntity.getGroupColumn() +") as value"  + " from " + dataEntity.getTables() + " group by " + dataEntity.getGroupColumn();
-				nplResponse.setResponseData(jdbcTemplate.queryForList(sqlActual));
-				
-			}
-		/*
-		}
-		 */	
 		log.info("Resultado del analize " + nplResponse);
 		return nplResponse;
 	}
 
-	private String GenerateSQL(String command, String mask, DataEntity dataEntity, ArrayList<String> nombres, 
-			ArrayList<String> operadores, ArrayList<Integer> valoresNumericos, ArrayList<String> camposOrderBy, ArrayList<String> fechas){
+	private String generateSQL(String command, String mask, DataEntity dataEntity, ArrayList<String> nombres, ArrayList<String> operadores, 
+			ArrayList<Integer> valoresNumericos, ArrayList<String> camposOrderBy, ArrayList<String> fechas, ArrayList<String> funciones){
 		
 		String sql = "";
 		
@@ -408,7 +395,9 @@ public class NplServiceFreeLingImpl implements NplService {
 		if (command.equalsIgnoreCase("listar"))	{
 			sql = "SELECT " + dataEntity.getColummns()  + " ";
 		} else if (command.equalsIgnoreCase("contar")) {
-			sql = "SELECT COUNT(" + dataEntity.getCountColumn() + ") ";
+			sql = "SELECT " + funciones.get(0).toString() + "(" + dataEntity.getCountColumn() + ") ";
+		} else if (command.equalsIgnoreCase("graficar")) {
+			sql = "SELECT " + dataEntity.getColummns()  + " ";
 		}
 		/* **************************** FROM ***************************** */
 		sql += " FROM " + dataEntity.getTables();
@@ -435,14 +424,20 @@ public class NplServiceFreeLingImpl implements NplService {
 				}
 			}			
 		}
-		else if(mask.matches("VMN NC SP DA NC SP (NP|NC) Fp")) {
+		else if(mask.matches("VMN NC SP DA NC SP (NP|NC|NC CC NC) (Fp|VMP SP NC Fp)")) {
 			// listar Nombre[0] de la Nombre[1] de Nombre[2]
 			if (sizeNombres >= 2 && sizeOperadores >= 1){
 				// WHERE [campo] [operador]  
-				sql += " where " + nombres.get(1).toString() + " " + operadores.get(0).toString(); 
+				sql += " WHERE " + nombres.get(1).toString() + " " + operadores.get(0).toString(); 
 				if (sizeNombres >= 3 ){
 					// Campo VARCHAR
-					sql += " '" + nombres.get(2).toString() + "'";			
+					sql += " '" + nombres.get(2).toString() + "'";
+					if (sizeNombres >= 4){
+						sql += operadores.get(1).toString() + 
+								nombres.get(1).toString() + " " + 
+								operadores.get(0).toString() + " '" + 
+								nombres.get(3).toString() + "' ";
+					}
 				} else if (sizeValoresNumericos == 1) {
 					// Campo INTEGER
 					sql += " " + valoresNumericos.get(0).toString();
@@ -450,13 +445,14 @@ public class NplServiceFreeLingImpl implements NplService {
 					// Campo DATE
 					sql += " '" + fechas.get(0).toString() + "'";					
 				}
+				
 			}			
 		}
 		else if(mask.matches("VMN NC VMP SP NC Fp")) {
 			// Listar alumnos ordenado por legajo
 			if (sizeCamposOrderBy >= 1 && sizeOperadores == 0)
 			{
-				sql += " order by ";
+				sql += " ORDER BY ";
 				for (int i = 0; i < camposOrderBy.size(); i++) {
 					sql += camposOrderBy.get(i).toString();
 				}
@@ -470,7 +466,7 @@ public class NplServiceFreeLingImpl implements NplService {
 		/* *************************** ORDER BY *************************** */
 		if (sizeCamposOrderBy >= 1 && sizeOperadores >= 1 && sql != null)
 		{
-			sql += " order by ";
+			sql += " ORDER BY ";
 			for (int i = 0; i < camposOrderBy.size(); i++) {
 				sql += camposOrderBy.get(i).toString();
 			}
