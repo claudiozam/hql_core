@@ -417,7 +417,7 @@ public class NplServiceFreeLingImpl implements NplService {
 				}
 			}
 		} else {
-			values.put("simpleText", "No se ingreso un comando correcto");
+			values.put("simpleText", "La consulta no pudo ser ejecutada");
 
 		}
 

@@ -1,12 +1,18 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core"%>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
-<head>
-<title>Listado</title>
-	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-      <link href="<c:url value="/css/jquery-ui.css" />" rel="stylesheet" type="text/css"/>
-      <link href="<c:url value="/css/jquery.jqplot.min.css" />" rel="stylesheet" type="text/css"/>
-      <script type="text/javascript" src="<c:url value="/js/jquery-1.8.js" />"></script>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Bootstrap, from Twitter</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <!-- Le styles -->
+    <link href="<c:url value="/css/bootstrap.css" />" rel="stylesheet">
+    
+    <link href="<c:url value="/css/bootstrap-responsive.css" />" rel="stylesheet">
+<script type="text/javascript" src="<c:url value="/js/jquery-1.8.js" />"></script>
       <script type="text/javascript" src="<c:url value="/js/jquery-ui.js" />"></script>
       <script type="text/javascript" src="<c:url value="/js/jquery.jqplot.min.js" />"></script>    
       <script type="text/javascript" src="<c:url value="/js/jqplot.pieRenderer.min.js" />"></script>
@@ -16,9 +22,25 @@
     		executeList(${queryId});
     	});
     </script>
-</head>
-<body>
+    <!-- Le HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+  </head>
+
+  <body>
+
+
+    <div class="container">
+
+      <h1>Listado</h1>
 	<div id="divOutput"></div>
-	<table id="target_table_id"></table>
-</body>
+	<table id="target_table_id" class="table table-bordered"></table>
+
+    </div> <!-- /container -->
+
+  
+
+  </body>
 </html>
