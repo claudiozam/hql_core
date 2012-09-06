@@ -53,6 +53,28 @@ $(function() {
 	
 });
 
+
+
+function executeList(queryId) {
+	$.getJSON('get_query.html', { queryId: queryId }, function(nplResponse) {
+		var data = nplResponse.responseData;
+		if(nplResponse.responseType == 'text') {
+			$('#divOutput').html(data.simpleText);	
+		} else if(nplResponse.responseType == 'list') {
+			var tbl_body = "";
+		    $.each(data, function() {
+		        var tbl_row = "";
+		        $.each(this, function(k , v) {
+		            tbl_row += "<td>"+v+"</td>";
+		        })
+		        tbl_body += "<tr>"+tbl_row+"</tr>";                 
+		    })
+		    $("#target_table_id").html(tbl_body);
+		}
+	});
+}
+
+
 function executeAnalize() {
 	var nplRequest = { text: $('#textToanalize').val(), userAgent: 'webbrowser'};
 	$.getJSON('analize.html', nplRequest, function(nplResponse) {

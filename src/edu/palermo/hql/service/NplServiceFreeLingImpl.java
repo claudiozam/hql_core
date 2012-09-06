@@ -12,12 +12,15 @@ import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 //import com.sun.org.apache.xerces.internal.impl.xpath.regex.ParseException;
 
 import edu.palermo.hql.bo.DataEntity;
 import edu.palermo.hql.bo.NplRequest;
 import edu.palermo.hql.bo.NplResponse;
+import edu.palermo.hql.dao.NplRequestDAO;
 import edu.palermo.hql.general.GeneralUtils;
 import edu.upc.freeling.ChartParser;
 import edu.upc.freeling.DepTxala;
@@ -34,7 +37,7 @@ import edu.upc.freeling.UkbWrap;
 import edu.upc.freeling.Util;
 import edu.upc.freeling.Word;
 
-@Component
+@Service
 public class NplServiceFreeLingImpl implements NplService {
 
 	private static Logger log = Logger.getLogger(NplServiceFreeLingImpl.class);
@@ -55,6 +58,10 @@ public class NplServiceFreeLingImpl implements NplService {
 	@Autowired
 	private NaturalQueryService naturalQueryService;
 
+	@Autowired
+	private NplRequestDAO nplRequestDAO;
+
+	
 	public NplServiceFreeLingImpl() {
 		init();
 	}
@@ -124,6 +131,7 @@ public class NplServiceFreeLingImpl implements NplService {
 		return this.process(analyzeWords, nplRequest);
 	}
 
+	@Transactional
 	private NplResponse process(List<Word> analyzeWords, NplRequest nplRequest)
 			throws HQLException {
 
@@ -344,6 +352,7 @@ public class NplServiceFreeLingImpl implements NplService {
 		// ya tengo las palabras base ahora tengo que hacer la consulta......
 		// ?????????????????????????????????????????????????????????????????
 		if (comandoActual != "") {
+			long nplRequestId = 0; 
 			DataEntity dataEntity = naturalQueryService
 					.findDataEntitieByAlias(entidadActual);
 			if (dataEntity != null) {
@@ -370,9 +379,10 @@ public class NplServiceFreeLingImpl implements NplService {
 							nplResponse.setResponseData(jdbcTemplate
 									.queryForList(sqlActual));
 						} else {
+							nplRequestId = nplRequestDAO.saveNplRequest(nplRequest);
 							nplResponse.setResponseType("link");
 							values.put("simpleText", "Click para ver la lista");
-							values.put("url", "/list.html?queryId=" + 34355);
+							values.put("url", "/list.html?queryId=" + nplRequestId);
 							// TODO: Me falta guardar la consulta en la base
 							// para ejecutar despues.....
 						}
@@ -390,9 +400,10 @@ public class NplServiceFreeLingImpl implements NplService {
 							nplResponse.setResponseData(jdbcTemplate
 									.queryForList(sqlActual));
 						} else {
+							nplRequestId = nplRequestDAO.saveNplRequest(nplRequest);
 							nplResponse.setResponseType("link");
 							values.put("simpleText", "Click para ver la lista");
-							values.put("url", "/chart.html?queryId=" + 34355);
+							values.put("url", "/chart.html?queryId=" + nplRequestDAO);
 							nplResponse.setResponseData(jdbcTemplate
 									.queryForList(sqlActual));
 							// TODO: Me falta guardar la consulta en la base
@@ -502,5 +513,12 @@ public class NplServiceFreeLingImpl implements NplService {
 		log.info("SQL Generado: " + sql);
 
 		return sql;
+	}
+
+	@Override
+	public NplResponse analizeBySavedQuery(Long queryId) throws HQLException {
+		NplRequest nplRequest = nplRequestDAO.getNplRequestById(queryId);
+		nplRequest.setUserAgent("saved-query");
+		return this.analize(nplRequest);
 	}
 }
