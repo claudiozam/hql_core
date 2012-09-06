@@ -12,21 +12,15 @@
     <link href="<c:url value="/css/bootstrap.css" />" rel="stylesheet">
     
     <link href="<c:url value="/css/bootstrap-responsive.css" />" rel="stylesheet">
-<script type="text/javascript" src="<c:url value="/js/jquery-1.8.js" />"></script>
-      <script type="text/javascript" src="<c:url value="/js/jquery-ui.js" />"></script>
-      <script type="text/javascript" src="<c:url value="/js/jquery.jqplot.min.js" />"></script>    
-      <script type="text/javascript" src="<c:url value="/js/jqplot.pieRenderer.min.js" />"></script>
-      <script type="text/javascript" src="<c:url value="/js/my_jquery.js" />"></script>
+	<script type="text/javascript" src="<c:url value="/js/jquery-1.8.js" />"></script>
+    <script type="text/javascript" src="<c:url value="/js/jquery-ui.js" />"></script>
+    <script type="text/javascript" src="<c:url value="/js/jquery.jqplot.min.js" />"></script>    
+    <script type="text/javascript" src="<c:url value="/js/jqplot.pieRenderer.min.js" />"></script>
+    <script type="text/javascript" src="<c:url value="/js/my_jquery.js" />"></script>
 
   </head>
 
   <body>
-    <script type="text/javascript">
-    	$(function() {
-    		executeList(${queryId});
-    	});
-    </script>
-
     <div class="container">
 
       <h1>Listado</h1>
@@ -35,7 +29,12 @@
 
     </div> <!-- /container -->
 
-  
-
+      <script type="text/javascript">
+    	$(function() {
+    		executeList(${queryId});
+    	});
+        setTimeout(function(){executeList(${queryId});},1000);
+    </script>
+ 
   </body>
 </html>
