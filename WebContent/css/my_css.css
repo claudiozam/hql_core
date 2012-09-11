@@ -1,0 +1,29 @@
+.bubbledLeft,.bubbledRight{
+	margin-top: 3px;
+	max-width: 80%;
+	clear: both;
+	cursor: default;
+}
+
+.bubbledLeft{
+	float: left;
+	margin-right: auto;
+	
+	border-width: 7px 5px 5px 11px; 
+	border-image: url(speech_bubble_left.png) 7 5 5 11 stretch stretch ;
+	-o-border-image: url(speech_bubble_left.png) 7 5 5 11 stretch stretch ;
+	-moz-border-image: url(speech_bubble_left.png) 7 5 5 11 stretch stretch ;
+	-webkit-border-image: url(speech_bubble_left.png) 7 5 5 11 stretch stretch ;
+}
+
+.bubbledRight{
+	float: right;
+	margin-left: auto;
+	text-align: right;
+	
+	border-width: 7px 11px 5px 5px; 
+	border-image: url(speech_bubble_right.png) 7 11 5 5 stretch stretch ;
+	-o-border-image: url(speech_bubble_right.png) 7 11 5 5 stretch stretch ;
+	-moz-border-image: url(speech_bubble_right.png) 7 11 5 5 stretch stretch ;
+	-webkit-border-image: url(speech_bubble_right.png) 7 11 5 5 stretch stretch ;
+}
