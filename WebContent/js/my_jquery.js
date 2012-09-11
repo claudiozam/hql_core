@@ -64,9 +64,9 @@ function executeList(queryId) {
 		        var tbl_row = "";
 		        $.each(this, function(k , v) {
 		            tbl_row += "<td>"+v+"</td>";
-		        })
+		        });
 		        tbl_body += "<tr>"+tbl_row+"</tr>";                 
-		    })
+		    });
 		    $("#target_table_id").html(tbl_body);
 		}
 	});
@@ -139,9 +139,9 @@ function executeAnalize() {
 		        var tbl_row = "";
 		        $.each(this, function(k , v) {
 		            tbl_row += "<td>"+v+"</td>";
-		        })
+		        });
 		        tbl_body += "<tr>"+tbl_row+"</tr>";                 
-		    })
+		    });
 		    $("#target_table_id").html(tbl_body);
 		    updateLog($('#textToanalize').val(),'Listando..');
 		} else if(nplResponse.responseType == 'pie-chart') {
@@ -176,8 +176,7 @@ function executeAnalize() {
 		          showDataLabels: true }
 		      },
 		      legend: { show:true, location: 'w' }
-		      }
-		    );
+		    });
 		    updateLog($('#textToanalize').val(),'Graficando..');
 		}
 	});
