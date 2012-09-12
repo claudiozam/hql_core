@@ -111,8 +111,8 @@ function executeGraph(queryId) {
 }
 
 function updateLog(request, answer){
-	$("#log").append("<tr><td class='bubbledLeft'>"+request+"</td></tr>")
-	$("#log").append("<tr><td class='bubbledRight'>"+answer+"</td></tr>")
+	$("#ul_log").append("<li class='bubbledLeft'>"+request+"</li>");
+	$("#ul_log").append("<li class='bubbledRight'>"+answer+"</li>");
 	$('#textToanalize').val('');
 }
 

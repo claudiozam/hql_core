@@ -42,8 +42,8 @@
 			</tr>	
 		</table>
 		</td>
-		<td style="width:25%; margin-left:2px" class="well">
-		<table id="log" style="width:100%;">
+		<td id="td_log" class="well">
+		  <div id="log"> <ul id="ul_log"></ul> </div>
 		</table>
 		</td>
 	</tr>

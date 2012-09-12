@@ -27,3 +27,30 @@
 	-moz-border-image: url(speech_bubble_right.png) 7 11 5 5 stretch stretch ;
 	-webkit-border-image: url(speech_bubble_right.png) 7 11 5 5 stretch stretch ;
 }
+
+#td_log {
+	width: 25%;
+	height: 200px;
+	margin-left: 2px;
+	vertical-align: text-top;
+}
+
+#ul_log {
+	align-text-vertical: top;
+	width: 100%;  
+}
+
+#log {
+	height:300px;
+	overflow-y: scroll;
+	overflow-x: hidden;
+}
+
+#ul_log li {
+	display: block;
+	list-style: none;
+	text-decoration: none;
+	margin-right: 30px;
+	font-weight: bold;
+	font-size: 12px;
+}
