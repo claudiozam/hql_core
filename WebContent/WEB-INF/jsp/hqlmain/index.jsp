@@ -33,12 +33,12 @@
 		</td>
 	</tr>
 	<tr>
-		<td style="width:50%" class="well">
+		<td id="td_result" style="width:50%" class="well">
 		<table>
-			<tr id="result"> 
-				<td id="divOutput"></td>
-				<td><table id="target_table_id" class="table table-striped table-condensed"></table></td>
-				<td id="chartOutput" style="margin-top:20px; margin-left:20px; width:460px; height:300px;"></td>	
+			<tr> 
+			    <td id="divOutput"></td>
+				<td> <div id="tableOutput"> <table id="target_table_id" class="table table-striped table-condensed"></table> </div></td>
+				<td id="chartOutput" class="chartOutput"></td>	
 			</tr>	
 		</table>
 		</td>

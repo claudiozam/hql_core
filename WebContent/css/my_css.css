@@ -36,13 +36,13 @@
 }
 
 #ul_log {
-	align-text-vertical: top;
+	align-text-vertical: bottom;
 	width: 100%;  
 }
 
 #log {
 	height:300px;
-	overflow-y: scroll;
+	overflow-y: auto;
 	overflow-x: hidden;
 }
 
@@ -53,4 +53,18 @@
 	margin-right: 30px;
 	font-weight: bold;
 	font-size: 12px;
+}
+
+.chartOutput {
+	width:40%; 
+	height:300px;
+	padding-top:20px;
+	position:absolute;
+}
+
+#tableOutput {
+	height:300px;
+	width:150%;
+	overflow-x: auto;
+	overflow-y: auto;
 }
