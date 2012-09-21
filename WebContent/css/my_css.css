@@ -1,0 +1,70 @@
+.bubbledLeft,.bubbledRight{
+	margin-top: 3px;
+	max-width: 80%;
+	clear: both;
+	cursor: default;
+}
+
+.bubbledLeft{
+	float: left;
+	margin-right: auto;
+	
+	border-width: 7px 5px 5px 11px; 
+	border-image: url(speech_bubble_left.png) 7 5 5 11 stretch stretch ;
+	-o-border-image: url(speech_bubble_left.png) 7 5 5 11 stretch stretch ;
+	-moz-border-image: url(speech_bubble_left.png) 7 5 5 11 stretch stretch ;
+	-webkit-border-image: url(speech_bubble_left.png) 7 5 5 11 stretch stretch ;
+}
+
+.bubbledRight{
+	float: right;
+	margin-left: auto;
+	text-align: right;
+	
+	border-width: 7px 11px 5px 5px; 
+	border-image: url(speech_bubble_right.png) 7 11 5 5 stretch stretch ;
+	-o-border-image: url(speech_bubble_right.png) 7 11 5 5 stretch stretch ;
+	-moz-border-image: url(speech_bubble_right.png) 7 11 5 5 stretch stretch ;
+	-webkit-border-image: url(speech_bubble_right.png) 7 11 5 5 stretch stretch ;
+}
+
+#td_log {
+	width: 25%;
+	height: 200px;
+	margin-left: 2px;
+	vertical-align: text-top;
+}
+
+#ul_log {
+	align-text-vertical: bottom;
+	width: 100%;  
+}
+
+#log {
+	height:300px;
+	overflow-y: auto;
+	overflow-x: hidden;
+}
+
+#ul_log li {
+	display: block;
+	list-style: none;
+	text-decoration: none;
+	margin-right: 30px;
+	font-weight: bold;
+	font-size: 12px;
+}
+
+.chartOutput {
+	width:40%; 
+	height:300px;
+	padding-top:20px;
+	position:absolute;
+}
+
+#tableOutput {
+	height:300px;
+	width:150%;
+	overflow-x: auto;
+	overflow-y: auto;
+}
