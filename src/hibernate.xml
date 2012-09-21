@@ -23,6 +23,7 @@ class="org.springframework.orm.hibernate3.annotation.AnnotationSessionFactoryBea
 	<list>
 		<value>edu.palermo.hql.bo.DataEntity</value>
 		<value>edu.palermo.hql.bo.NaturalQueryCommand</value>
+		<value>edu.palermo.hql.bo.NplRequest</value>
 	</list>
     </property>
  

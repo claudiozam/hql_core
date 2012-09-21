@@ -5,8 +5,10 @@ import java.util.List;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import edu.palermo.hql.bo.AutoCompleteItem;
@@ -33,6 +35,17 @@ public class HqlMainController {
 		return "/hqlmain/index";
 	}
 	
+	@RequestMapping(value="/chart", method=RequestMethod.GET)
+	public String chart(@RequestParam("queryId") Long queryId, Model model) {
+		model.addAttribute("queryId", queryId);
+		return "/hqlmain/chart";
+	}
+	
+	@RequestMapping(value="/list", method=RequestMethod.GET)
+	public String list(@RequestParam("queryId") Long queryId, Model model) {
+		model.addAttribute("queryId", queryId);
+		return "/hqlmain/list";
+	}
 
 	@ResponseBody
 	@RequestMapping(value="/autocomplete_natural_query_commands", method=RequestMethod.GET)
@@ -52,4 +65,14 @@ public class HqlMainController {
 		return nplService.analize(nplRequest);
 	}
 	
+	@ResponseBody
+	@RequestMapping(value="/get_query", method=RequestMethod.GET)
+	public NplResponse getQuery(@RequestParam("queryId") Long queryId) throws HQLException {
+		log.info("Ejecutando getQuery para el queryId: " + queryId);
+		return nplService.analizeBySavedQuery(queryId);
+	}
+	
 }
+
+
+

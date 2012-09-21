@@ -1,20 +1,24 @@
 package edu.palermo.hql.service;
-import java.sql.Date;
-import java.text.SimpleDateFormat;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.text.ParseException;
+
 import javax.sql.DataSource;
 
 import org.apache.log4j.Logger;
+import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import edu.palermo.hql.bo.DataEntity;
 import edu.palermo.hql.bo.NplRequest;
 import edu.palermo.hql.bo.NplResponse;
+import edu.palermo.hql.bo.Query;
+import edu.palermo.hql.dao.NplRequestDAO;
+import edu.palermo.hql.general.GeneralUtils;
 import edu.upc.freeling.ChartParser;
 import edu.upc.freeling.DepTxala;
 import edu.upc.freeling.HmmTagger;
@@ -30,37 +34,40 @@ import edu.upc.freeling.UkbWrap;
 import edu.upc.freeling.Util;
 import edu.upc.freeling.Word;
 
-@Component
+@Service
 public class NplServiceFreeLingImpl implements NplService {
-	
+
 	private static Logger log = Logger.getLogger(NplServiceFreeLingImpl.class);
 
 	private static final String FREELINGDIR = "/usr/local";
 	private static final String DATA = FREELINGDIR + "/share/freeling/";
 	private static final String LANG = "es";
-	
+
 	private Tokenizer tk;
 	private Splitter sp;
 	private Maco mf;
 	private HmmTagger tg;
 	private Nec neclass;
-	
+
 	@Autowired
 	private DataSource dataSource;
-	
+
 	@Autowired
 	private NaturalQueryService naturalQueryService;
+
+	@Autowired
+	private NplRequestDAO nplRequestDAO;
+
 	
 	public NplServiceFreeLingImpl() {
 		init();
 	}
-	
+
 	private void init() {
 		log.info("Cargando freeling.....");
-		//System.loadLibrary("libfreeling_javaAPI");
+		// System.loadLibrary("libfreeling_javaAPI");
 		System.load("/home/hql/myfreeling/APIs/java/libfreeling_javaAPI.so");
-		
-		
+
 		Util.initLocale("default");
 
 		MacoOptions op = new MacoOptions(LANG);
@@ -76,86 +83,101 @@ public class NplServiceFreeLingImpl implements NplService {
 
 		tk = new Tokenizer(DATA + LANG + "/tokenizer.dat");
 		sp = new Splitter(DATA + LANG + "/splitter.dat");
-		
+
 		mf = new Maco(op);
 
 		tg = new HmmTagger(LANG, DATA + LANG + "/tagger.dat", true, 2);
 		ChartParser parser = new ChartParser(DATA + LANG
 				+ "/chunker/grammar-chunk.dat");
-		
+
 		DepTxala dep = new DepTxala(DATA + LANG + "/dep/dependences.dat",
 				parser.getStartSymbol());
-		
+
 		neclass = new Nec(DATA + LANG + "/nec/nec-ab.dat");
 
 		UkbWrap dis = new UkbWrap(DATA + LANG + "/ukb.dat");
-		
+
 		log.info("Freeling cargado");
-		
 
 	}
+
 	@Override
-	public synchronized NplResponse analize(NplRequest nplRequest) throws HQLException {
+	public synchronized NplResponse analize(NplRequest nplRequest)
+			throws HQLException {
 		log.info("Ejecutando analize " + nplRequest);
-		
+
 		ListWord l = tk.tokenize(nplRequest.getText());
 		ListSentence ls = sp.split(l, false);
 		mf.analyze(ls);
 		tg.analyze(ls);
 		neclass.analyze(ls);
-		
+
 		List<Word> analyzeWords = new ArrayList<Word>();
-		
+
 		for (int i = 0; i < ls.size(); i++) {
-			//Por el momento solo trabajamos con una sola sentence....
+			// Por el momento solo trabajamos con una sola sentence....
 			Sentence s = ls.get(i);
 			for (int j = 0; j < s.size(); j++) {
 				Word w = s.get(j);
-				log.info("Word: " + w.getForm() + " Lc: " + w.getLcForm() + " Lemma: " + w.getLemma() +  " Tag: " + w.getTag() + " ShortTag: " + w.getShortTag());
+				log.info("Word: " + w.getForm() + " Lc: " + w.getLcForm()
+						+ " Lemma: " + w.getLemma() + " Tag: " + w.getTag()
+						+ " ShortTag: " + w.getShortTag());
 				analyzeWords.add(w);
 			}
 		}
-		return this.process(analyzeWords);
+		return this.process(analyzeWords, nplRequest);
 	}
-	
-	private NplResponse process(List<Word> analyzeWords) throws HQLException {
 
-		HashMap<String , String> values = new HashMap<String, String>();
-		
+	@Transactional
+	private NplResponse process(List<Word> analyzeWords, NplRequest nplRequest) throws HQLException {
+
+		HashMap<String, String> values = new HashMap<String, String>();
+
+		boolean isFromMobile = GeneralUtils.checkIsMobile(nplRequest.getUserAgent());
+
 		String mascaraActual = "";
 		String comandoActual = "";
 		String entidadActual = "";
-		//String filtroActual = "";
+		// String filtroActual = "";
 		String shortTag = "";
 		String form = "";
-		
+
 		String sqlActual = "";
-		
+
 		String tag = "";
 		String lemma = "";
-		
-		ArrayList<String> fechas = new ArrayList<String>();
-		ArrayList<String> nombres = new ArrayList<String>();
+
+
 		ArrayList<String> funciones = new ArrayList<String>();
 		ArrayList<String> operadores = new ArrayList<String>();
+		ArrayList<String> operadoresLogicos = new ArrayList<String>();
+		
+		ArrayList<String> valores = new ArrayList<String>();
+		ArrayList<String> entidades = new ArrayList<String>();
+		ArrayList<String> camposWhere = new ArrayList<String>();
+
 		ArrayList<String> camposOrderBy = new ArrayList<String>();
-		ArrayList<String> signoPuntuacion = new ArrayList<String>();
-		ArrayList<Integer> valoresNumericos = new ArrayList<Integer>();
+		ArrayList<String> camposGroupBy = new ArrayList<String>();
+		
+		Integer dia = 0;
+		Integer mes = 0;
+		Integer anio = 0;
+		Integer horas = 0;
+		Integer minutos = 0;
 		
 		boolean requiereOrderBy = false;
-		
+
 		// -----------------------------------------------------------
-		
+
 		NplResponse nplResponse = new NplResponse();
 		long id = 12345678;
 		nplResponse.setId(id);
 		nplResponse.setResponseType("text");
-		values.put("simpleText", "La consulta no pudo ser ejecutada");
 		nplResponse.setResponseData(values);
-		
+
 		JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
-		
-		// ----------------------------------------------------------------------------------				
+
+		// ----------------------------------------------------------------------------------
 		// Comienzo del FOR
 		// ----------------------------------------------------------------------------------
 		for (Word w : analyzeWords) {
@@ -168,6 +190,9 @@ public class NplServiceFreeLingImpl implements NplService {
 			mascaraActual += shortTag + " ";
 			/* ****************************** Verbos ************************************ */
 			if (shortTag.startsWith("VMN")) {
+				/* ----------------------------------------------------------------*/		
+				/*                           COMANDOS                              */
+				/* ----------------------------------------------------------------*/
 				if (form.equalsIgnoreCase("listar")) {
 					comandoActual = "listar";
 				} else if (form.equalsIgnoreCase("graficar")) {
@@ -179,147 +204,168 @@ public class NplServiceFreeLingImpl implements NplService {
 					//comandoActual = "sumar";
 					funciones.add("SUM");
 				}
-				
 			} else if(shortTag.startsWith("VMP")){
+				/* ----------------------------------------------------------------*/		
+				/*                        FLAG ORDER BY                            */
+				/* ----------------------------------------------------------------*/
 				if (lemma.equalsIgnoreCase("ordenar")){
-					// Flag para avisar que los proximos "N" son campos del ORDER BY
 					requiereOrderBy = true;
 				}
-			} else if (shortTag.startsWith("VSI")){
-				if (form.equalsIgnoreCase("es")){}
 			}
 			/* ****************************** Nombres *********************************** */
 			else if (shortTag.startsWith("N")) {
-				// Si es el primer "N" entonces lo guardo como nombre de la entidad
-				if (nombres.isEmpty())
-				{
-					entidadActual = form;
+				if (entidades.isEmpty()) {
+					/* ----------------------------------------------------------------*/		
+					/*                          ENTIDADES                              */
+					/* ----------------------------------------------------------------*/
+					entidades.add(form);
+					entidadActual = entidades.get(0).toString();
+				} else if (!entidades.isEmpty() && camposWhere.isEmpty() && requiereOrderBy == false){
+					/* ----------------------------------------------------------------*/		
+					/*                        CAMPOS WHERE                             */
+					/* ----------------------------------------------------------------*/
+					camposWhere.add(form);	
+				} else if (!entidades.isEmpty() && !camposWhere.isEmpty() && requiereOrderBy == false){
+					/* ----------------------------------------------------------------*/		
+					/*                           VALORES                               */
+					/* ----------------------------------------------------------------*/
+					if (shortTag.startsWith("NC") && form.equalsIgnoreCase("ayer")){
+						// AYER
+						DateTime dt = new DateTime(DateTime.now());
+						dt = dt.plusDays(-1);
+						log.info("Fecha JODA: " + dt.toString("yyyy-MM-dd"));
+						valores.add(dt.toString("yyyy-MM-dd"));
+					} else {
+						valores.add(form);
+					}
+				} else if (requiereOrderBy == true){
+					/* ----------------------------------------------------------------*/		
+					/*                      CAMPOS ORDER BY                            */
+					/* ----------------------------------------------------------------*/
+					// Si se proceso previamente la palabra "ordenar" empiezo a guardar los campos en otro Array
+					camposOrderBy.add(form);
+					// -------------------------------------------------------------
 				}
-				// Pregunto si previamente se proceso la palabra "ordenar"
-				// En caso de ser TRUE empiezo a guardar los campos del ORDER BY en otro ArrayList
-				if (requiereOrderBy == true){
-					camposOrderBy.add(form); 
-				} else {
-					nombres.add(form);	
+			}
+			/* ***************************** Advervios ********************************** */
+			else if(shortTag.startsWith("R")){
+				if (form.equalsIgnoreCase("hoy")){
+					// --------------------------------------------------
+					// HOY
+					// --------------------------------------------------
+					DateTime dt = new DateTime(DateTime.now());
+					log.info("Fecha JODA: " + dt.toString("yyyy-MM-dd"));
+					valores.add(dt.toString("yyyy-MM-dd"));
+				} else if (form.equalsIgnoreCase("ayer")){
+					// --------------------------------------------------
+					// AYER
+					// --------------------------------------------------
+					DateTime dt = new DateTime(DateTime.now());
+					dt.plusDays(-1);
+					log.info("Fecha JODA: " + dt.toString("yyyy-MM-dd"));
+					valores.add(dt.toString("yyyy-MM-dd"));
+					// --------------------------------------------------
+				} else if (form.equalsIgnoreCase("mes")){
+					// MES
+				} else if (form.equalsIgnoreCase("año")){
+					// AÑO
 				}
 			}
 			/* *************************** Preposiciones ******************************** */
 			else if (shortTag.startsWith("S")) {
-				if (form.equalsIgnoreCase("de")){
-					if (nombres.size() == 2)
-					{
-						operadores.add(" = ");
+				/* ----------------------------------------------------------------*/		
+				/*                  OPERADORES DE COMPARACION                      */
+				/* ----------------------------------------------------------------*/
+				// TODO: Me falta chequear cuales estan funcionando actualmente
+				if (form.equalsIgnoreCase("de")) {
+					if (camposWhere.size() == 1) {
+						operadores.add("=");
+					} else if (form.equalsIgnoreCase("entre")) {
+						operadores.add("BETWEEN");
 					}
 				}
-				if (tag.startsWith("SPS00")){
-					if (form.equalsIgnoreCase("a")){}
-					else if (form.equalsIgnoreCase("con")){}
-					else if (form.equalsIgnoreCase("hasta")){
-						operadores.add(" <= ");
+				
+				if (tag.startsWith("SPS00")) {
+					if (form.equalsIgnoreCase("a")) {
+					} else if (form.equalsIgnoreCase("con")) {
+					} else if (form.equalsIgnoreCase("hasta")) {
+						operadores.add("<=");
+					} else if (form.equalsIgnoreCase("desde")) {
+						operadores.add(">=");
+					} else if (form.equalsIgnoreCase("entre")) {
+						operadores.add("BETWEEN");
 					}
-					else if (form.equalsIgnoreCase("desde")){
-						operadores.add(" >= ");
-					}
-					else if (form.equalsIgnoreCase("entre")){}
-					else if (form.equalsIgnoreCase("en")){
-						//operadores.add(" IN ");
-					}
-					else if (form.equalsIgnoreCase("por")){}
-				}	
+				}
 			}
 			/* ***************************** Adjetivos ********************************** */
-			else if (shortTag.startsWith("A")){
-				// Operadores de condicion
-				if (form.equalsIgnoreCase("igual")){
+			else if (shortTag.startsWith("A")) {
+				if (form.equalsIgnoreCase("igual")) { 
 					operadores.add(" = ");
-				}
-				else if (form.equalsIgnoreCase("mayor")){
+				} else if (form.equalsIgnoreCase("mayor")) {
 					operadores.add(" > ");
-				}
-				else if (form.equalsIgnoreCase("menor")){
+				} else if (form.equalsIgnoreCase("menor")) {
 					operadores.add(" < ");
 				}
 			}
 			/* **************************** Pronombres ********************************** */
-			else if (shortTag.startsWith("P")){
-				if (shortTag.startsWith("PI")){}
-				else if (shortTag.startsWith("PT")){}
-				else if (shortTag.startsWith("PR")){
-					// Pronombres Relativos
-					// Posibles tipos de filtro para where (ej cuales, cuantos, quienes, donde)
-					if (form.equalsIgnoreCase("donde")){
-						// El "donde" es equivalenle al "de" (nos avisa que la consulta debe estar filtrada) 
-					}
-				}	
+			else if (shortTag.startsWith("P")) {
+				// Esta parte la controlo con las mascaras, por ahora no se usa
 			}
 			/* *************************** Conjunciones ********************************* */
 			else if (shortTag.startsWith("C")) {
-				if (shortTag.startsWith("CS")) {}
-				else if (shortTag.startsWith("CC")){
-					// Operadores logicos
+				if (shortTag.startsWith("CC")) {
+					/* ----------------------------------------------------------------*/		
+					/*                       OPERADORES LOGICOS                        */
+					/* ----------------------------------------------------------------*/
 					if (form.equalsIgnoreCase("y") || form.equalsIgnoreCase("e")){
-						operadores.add(" AND ");
+						operadoresLogicos.add(" AND ");
 					}
 					else if (form.equalsIgnoreCase("o") || form.equalsIgnoreCase("u")){
-						operadores.add(" OR ");
+						operadoresLogicos.add(" OR ");
 					}
+					log.info("operadoresLogicos: " + form);
 				}
 			}
 			/* *********************** Signos de Puntuacion ***************************** */
 			else if (shortTag.startsWith("F")){
-				if (shortTag.startsWith("Fc")){	
-					// Coma (,)
-					signoPuntuacion.add(", ");
-				}
+				// Por ahora solo usamos una sola oracion
 			}
 			/* ************************ Cifras y Numerales ****************************** */
-			else if (shortTag.startsWith("Z")){	
-				valoresNumericos.add(Integer.parseInt(lemma));
+			else if (shortTag.startsWith("Z")) {
+				/* ----------------------------------------------------------------*/		
+				/*                       VALORES NUMERICOS                         */
+				/* ----------------------------------------------------------------*/
+				valores.add(lemma);
 			}
 			/* ****************************** Fechas ************************************ */
 			else if (shortTag.startsWith("W")) {
-				
-				String[] arrayFecha = lemma.replace("([|])", "").split(":");
-				// Tengo que mejorar esta parte
-				// No me di cuenta y borre la parte donde estaba el ejemplo de SimpleDateFormat 
+				/* ----------------------------------------------------------------*/		
+				/*                      VALORES TIPO FECHA                         */
+				/* ----------------------------------------------------------------*/
+				// El lemma viene con corchetes, los reemplazo para poder hacer un split
+				String[] arrayFecha = lemma.replace("([|])", "").split(":");	
+				// Recorro el array para encontrar la parte del lemma que tiene la fecha
 				for (int i = 0; i < arrayFecha.length; i++) {
-					if (i == 1){
-						/*
-						// La posicion 1 tiene la fecha en formato ??/mm/yyyy
+					if (i == 1) {
+						// La posicion 1 tiene la fecha en formato dd/mm/yyyy
+						// Si NO se informa el dia el lemma viene con formato ??/mm/yyyy 
+						//para evitar que pinche hacemos un replace
 						String s = arrayFecha[1].replace("??", "01").toString();
-						
-						log.info("Fecha: " + s);
-						
 						String[] f = s.split("/");
-						if (f[1].length() == 1){
-							f[1] = '0' + f[1];
-						}
-						String fechaFormateada = f[2] + "-" + f[1] + "-" + f[0];
-						fechas.add(fechaFormateada);
-						log.info("Fecha: " + fechas.get(0));
-						*/
-						/*
-						arrayFecha[1] = arrayFecha[1].replace("??", "01").toString();
-						String[] f = arrayFecha[1].split("/");
-						if (f[1].length() == 1){
-							f[1] = '0' + f[1];
-						}
-						*/
-						SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
-						log.info("Fecha: " + arrayFecha[1].toString());
-				        try {
-				        	Date now = (Date) new java.util.Date(20080402);
-				            //Date parseDate = (Date) format.parse(arrayFecha[1].toString());
-				            Date parseDate = (Date) format.parse(now.toString());
-				            fechas.add(parseDate.toString());
-				            log.info("Fecha: " + fechas.get(0).toString());
-				        } 
-				        catch (ParseException e) {
-				        	log.info("Fecha: " + arrayFecha[1].toString());
-				        }
+						// Guardo valores para crear la fecha JODA
+						dia = Integer.parseInt(f[0].toString());
+						mes = Integer.parseInt(f[1].toString());
+						anio = Integer.parseInt(f[2].toString());
+						// Falta esta parte
+						horas = 0;
+						minutos = 0;
 					}
 				}
-
+				// Fecha JODA
+				DateTime dt = new DateTime(anio, mes, dia, horas, minutos);
+				log.info("Fecha JODA: " + dt.toString("yyyy-MM-dd"));
+				
+				valores.add(dt.toString("yyyy-MM-dd"));
 			}
 			/* ************************************************************************** */
 			else {
@@ -330,151 +376,76 @@ public class NplServiceFreeLingImpl implements NplService {
 		// Fin del FOR
 		// ----------------------------------------------------------------------------------
 		
-		/* Tipos de oraciones validas
-		 * 
-		 * Lista alumnos
-		 * Lista alumnos donde carrera es igual a medicina
-		 * Listar alumnos ordenado por legajo
-		 * Contar alumnos
-		 * Listar productos donde el precio es mayor a 10000
-		 * Contar inscriptos desde enero del 2012 hasta abril del 2013
-		 */
-		
 		// ya tengo las palabras base ahora tengo que hacer la consulta......
 		// ?????????????????????????????????????????????????????????????????
-		if (comandoActual != "")
-		{
+		if (comandoActual != "") {
+			long nplRequestId = 0; 
 			DataEntity dataEntity = naturalQueryService.findDataEntitieByAlias(entidadActual);
+		
 			if (dataEntity != null) {
 				mascaraActual = mascaraActual.trim();
-				log.info("Mascara: " + mascaraActual);		
-				/* **************************** generateSQL ********************************* */
-				sqlActual = this.generateSQL(comandoActual, mascaraActual, dataEntity, 
-						nombres, operadores, valoresNumericos, camposOrderBy, fechas, funciones);
+				log.info("Mascara: " + mascaraActual);
+				
+				/* **************************** Generar SQL ********************************* */
+				Query query = new Query(comandoActual, mascaraActual, dataEntity.getColummns(), 
+										dataEntity.getCountColumn(),  entidadActual, camposWhere, 
+										operadores, valores, camposOrderBy, camposGroupBy, 
+										operadoresLogicos, funciones);
+				sqlActual = query.getSql();
+				log.info("SQL Generado: " + sqlActual);
 				/* ************************************************************************** */
-				if (sqlActual != null){
+				
+				if (sqlActual != null) {
+					/* ----------------------------------------------------------------*/		
+					/*                            CONTAR                               */
+					/* ----------------------------------------------------------------*/
 					if (comandoActual.equalsIgnoreCase("contar")) {
-						log.info("SQL Generado: " + sqlActual);
 						int countEntidad = jdbcTemplate.queryForInt(sqlActual);
 						values.put("simpleText", "El resultado es " + countEntidad);
 						nplResponse.setResponseData(values);
+					/* ----------------------------------------------------------------*/		
+					/*                            LISTAR                               */
+					/* ----------------------------------------------------------------*/
 					} else if (comandoActual.equalsIgnoreCase("listar")) {
 						nplResponse.setResponseType("list");
-						nplResponse.setResponseData(jdbcTemplate.queryForList(sqlActual));			
-					}
-					if (comandoActual.equalsIgnoreCase("graficar")) {
-						nplResponse.setResponseType("pie-chart");
 						nplResponse.setResponseData(jdbcTemplate.queryForList(sqlActual));
+					/* ----------------------------------------------------------------*/		
+					/*                           GRAFICAR                              */
+					/* ----------------------------------------------------------------*/
+					} else if (comandoActual.equalsIgnoreCase("graficar")) {
+						nplResponse.setResponseType("pie-chart");
+						sqlActual = "select " + dataEntity.getGroupColumn()
+								+ ", count(" + dataEntity.getGroupColumn()
+								+ ") as value" + " from "
+								+ dataEntity.getTables() + " group by "
+								+ dataEntity.getGroupColumn();
+						if (!isFromMobile) {
+							nplResponse.setResponseType("pie-chart");
+							nplResponse.setResponseData(jdbcTemplate.queryForList(sqlActual));
+						} else {
+							nplRequestId = nplRequestDAO.saveNplRequest(nplRequest);
+							nplResponse.setResponseType("link");
+							values.put("simpleText", "Click para ver la lista");
+							values.put("url", "/chart.html?queryId=" + nplRequestDAO);
+							nplResponse.setResponseData(jdbcTemplate.queryForList(sqlActual));
+							// TODO: Me falta guardar la consulta en la base
+							// para ejecutar despues.....
+						}
 					}
-				} else{
-					nplResponse.setResponseData("No se pudo generar la consulta SQL");
-				}
+					/* ----------------------------------------------------------------*/
+				} 
 			}	
-		} else{
-			nplResponse.setResponseData("No se ingreso un comando valido");
-		}
+		} 
 		// ?????????????????????????????????????????????????????????????????
-			
+
 		log.info("Resultado del analize " + nplResponse);
 		return nplResponse;
 	}
 
-	private String generateSQL(String command, String mask, DataEntity dataEntity, ArrayList<String> nombres, ArrayList<String> operadores, 
-			ArrayList<Integer> valoresNumericos, ArrayList<String> camposOrderBy, ArrayList<String> fechas, ArrayList<String> funciones){
-		
-		String sql = "";
-		
-		int sizeFechas = fechas.size();
-		int sizeNombres = nombres.size();
-		int sizeOperadores = operadores.size();
-		int sizeCamposOrderBy = camposOrderBy.size();
-		int sizeValoresNumericos = valoresNumericos.size();
-		
-		/* *************************** SELECT **************************** */
-		// Identifico el tipo de comando
-		if (command.equalsIgnoreCase("listar"))	{
-			sql = "SELECT " + dataEntity.getColummns()  + " ";
-		} else if (command.equalsIgnoreCase("contar")) {
-			sql = "SELECT " + funciones.get(0).toString() + "(" + dataEntity.getCountColumn() + ") ";
-		} else if (command.equalsIgnoreCase("graficar")) {
-			sql = "SELECT " + dataEntity.getColummns()  + " ";
-		}
-		/* **************************** FROM ***************************** */
-		sql += " FROM " + dataEntity.getTables();
-		/* **************************** WHERE **************************** */
-		// Identifico el tipo de mascara
-		if(mask.matches("VMN NC Fp")) {
-			// listar alumnos
-			// NO hace falta modificar la variable sql debido a que se guardaria lo mismo que tiene cargado
-			return sql;
-		}
-		else if(mask.matches("VMN NC (PR|S) NC VSI AQ SP (NC|NP|Z|W) (Fp|VMP SP NC Fp)")) {
-			// listar Nombre[0] donde Nombre[1] es igual a Nombre[2]
-			if (sizeNombres >= 2 && sizeOperadores >= 1){
-				sql += " where " + nombres.get(1).toString() + " " + operadores.get(0).toString(); 
-				if (sizeNombres >= 3 ){
-					// Campo VARCHAR
-					sql += " '" + nombres.get(2).toString() + "'";			
-				} else if (sizeValoresNumericos == 1) {
-					// Campo INTEGER
-					sql += " " + valoresNumericos.get(0).toString();
-				} else if (sizeFechas == 1) {
-					// Campo DATE
-					sql += " '" + fechas.get(0).toString() + "'";
-				}
-			}			
-		}
-		else if(mask.matches("VMN NC SP DA NC SP (NP|NC|NC CC NC) (Fp|VMP SP NC Fp)")) {
-			// listar Nombre[0] de la Nombre[1] de Nombre[2]
-			if (sizeNombres >= 2 && sizeOperadores >= 1){
-				// WHERE [campo] [operador]  
-				sql += " WHERE " + nombres.get(1).toString() + " " + operadores.get(0).toString(); 
-				if (sizeNombres >= 3 ){
-					// Campo VARCHAR
-					sql += " '" + nombres.get(2).toString() + "'";
-					if (sizeNombres >= 4){
-						sql += operadores.get(1).toString() + 
-								nombres.get(1).toString() + " " + 
-								operadores.get(0).toString() + " '" + 
-								nombres.get(3).toString() + "' ";
-					}
-				} else if (sizeValoresNumericos == 1) {
-					// Campo INTEGER
-					sql += " " + valoresNumericos.get(0).toString();
-				} else if (sizeFechas == 1) {
-					// Campo DATE
-					sql += " '" + fechas.get(0).toString() + "'";					
-				}
-				
-			}			
-		}
-		else if(mask.matches("VMN NC VMP SP NC Fp")) {
-			// Listar alumnos ordenado por legajo
-			if (sizeCamposOrderBy >= 1 && sizeOperadores == 0)
-			{
-				sql += " ORDER BY ";
-				for (int i = 0; i < camposOrderBy.size(); i++) {
-					sql += camposOrderBy.get(i).toString();
-				}
-			}	
-		}
-		else{
-			sql = null;
-		}
-		/* *************************** GROUP BY *************************** */
-		
-		/* *************************** ORDER BY *************************** */
-		if (sizeCamposOrderBy >= 1 && sizeOperadores >= 1 && sql != null)
-		{
-			sql += " ORDER BY ";
-			for (int i = 0; i < camposOrderBy.size(); i++) {
-				sql += camposOrderBy.get(i).toString();
-			}
-		}
-		/* *************************************************************** */
-		
-		log.info("SQL Generado: " + sql);
-
-		return sql;
+	@Override
+	public NplResponse analizeBySavedQuery(Long queryId) throws HQLException {
+		NplRequest nplRequest = nplRequestDAO.getNplRequestById(queryId);
+		nplRequest.setUserAgent("saved-query");
+		return this.analize(nplRequest);
 	}
 }
