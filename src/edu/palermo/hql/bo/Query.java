@@ -89,7 +89,7 @@ public class Query {
 		if (comando.equalsIgnoreCase("listar")) {
 			// Agrego esta parte porque en la parte web no se veia bien el 
 			// formato de la fecha despues de que agregue la parte de la hora
-			camposSelect = this.formatDateColumns(camposSelect);			
+			//camposSelect = this.formatDateColumns(camposSelect);			
 			select += camposSelect + " ";
 		} else if (comando.equalsIgnoreCase("contar")) {
 			//Por ahora solo una funcion de agregado
@@ -215,7 +215,7 @@ public class Query {
 		for (int i = 0; i < s.length; i++){
 			// TODO: mejorar esta parte!!!
 			if (s[i].toString().contains("fecha")){
-				String campoFechaConFuncion = "DATE_FORMAT(" + s[i].toString() + ", '" + format + "')";
+				String campoFechaConFuncion = "DATE_FORMAT(" + s[i].toString() + ", '" + format + "') as fecha ingreso";
 				camposSelectFormateados = camposSelect.replace(s[i].toString(), campoFechaConFuncion);
 			}
 		}
