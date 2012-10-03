@@ -32,6 +32,7 @@ public class HqlMainController {
 	
 	@RequestMapping(value="/index", method=RequestMethod.GET)
 	public String index() {
+		naturalQueryService.reIndexFTSAllObjets();
 		return "/hqlmain/index";
 	}
 	
@@ -49,7 +50,7 @@ public class HqlMainController {
 
 	@ResponseBody
 	@RequestMapping(value="/autocomplete_natural_query_commands", method=RequestMethod.GET)
-	public List<AutoCompleteItem> autoCompleteNaturalQueryCommands(String term) throws HQLException {
+	public List<AutoCompleteItem> autoCompleteNaturalQueryCommands(String term) throws Exception {
 		log.info("Ejecutando autoCompleteNaturalQueryCommands para el termino: " + term);
 		//Ver si filtramos comandos duplicados y de damos algo de logica al autocomplete para generar las consultas
 		List<AutoCompleteItem> items = naturalQueryService.getAutoCompleteItems(term);
@@ -60,14 +61,14 @@ public class HqlMainController {
 	
 	@ResponseBody
 	@RequestMapping(value="/analize", method=RequestMethod.GET)
-	public NplResponse analize(NplRequest nplRequest) throws HQLException {
+	public NplResponse analize(NplRequest nplRequest) throws Exception {
 		log.info("Ejecutando analize");
 		return nplService.analize(nplRequest);
 	}
 	
 	@ResponseBody
 	@RequestMapping(value="/get_query", method=RequestMethod.GET)
-	public NplResponse getQuery(@RequestParam("queryId") Long queryId) throws HQLException {
+	public NplResponse getQuery(@RequestParam("queryId") Long queryId) throws Exception {
 		log.info("Ejecutando getQuery para el queryId: " + queryId);
 		return nplService.analizeBySavedQuery(queryId);
 	}

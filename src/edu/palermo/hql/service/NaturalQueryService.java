@@ -27,7 +27,7 @@ public class NaturalQueryService {
 		return naturalQueryCommandDAO.getNaturalQueryCommands();
 	}
 
-	public List<AutoCompleteItem> getAutoCompleteItems(String term) {
+	public List<AutoCompleteItem> getAutoCompleteItems(String term) throws Exception {
 		List<AutoCompleteItem> items = new ArrayList<AutoCompleteItem>();
 		for(NaturalQueryCommand command : naturalQueryCommandDAO.getNaturalQueryCommands(term)) {
 			items.add(new AutoCompleteItem(command.getId(), command.getName(), command.getName() + " (Comando)", ""));
@@ -40,8 +40,12 @@ public class NaturalQueryService {
 		return items;
 	}
 	
-	public DataEntity findDataEntitieByAlias(String alias) {
+	public DataEntity findDataEntitieByAlias(String alias) throws Exception {
 		return dataEntityDAO.findDataEntitieByAlias(alias);
+	}
+	
+	public void reIndexFTSAllObjets() {
+		dataEntityDAO.reIndexFTS();
 	}
 	
 }

@@ -4,7 +4,14 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 
+import org.hibernate.search.annotations.DocumentId;
+import org.hibernate.search.annotations.Field;
+import org.hibernate.search.annotations.Index;
+import org.hibernate.search.annotations.Indexed;
+import org.hibernate.search.annotations.Store;
+
 @Entity
+@Indexed
 public class DataEntity {
 
 	private Long id;
@@ -16,7 +23,8 @@ public class DataEntity {
 	private String groupColumn;
 	private String defaultOrderBy;
 	
-	
+	//@Field(index = Index.TOKENIZED, store = Store.YES)
+	@Field(index = Index.TOKENIZED, store = Store.YES)
 	public String getAlias() {
 		return alias;
 	}
@@ -27,6 +35,7 @@ public class DataEntity {
 
 	@Id
 	@GeneratedValue
+	@DocumentId
 	public Long getId() {
 		return id;
 	}

@@ -5,7 +5,7 @@ import edu.palermo.hql.bo.NplResponse;
 
 public interface NplService {
 
-	public NplResponse analize(NplRequest nplRequest) throws HQLException;
-	public NplResponse analizeBySavedQuery(Long queryId) throws HQLException;
+	public NplResponse analize(NplRequest nplRequest) throws Exception;
+	public NplResponse analizeBySavedQuery(Long queryId) throws Exception;
 	
 }

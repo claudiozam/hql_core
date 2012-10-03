@@ -16,7 +16,7 @@
     </logger> 
     
      <root>
-        <priority value="INFO"/> 
+        <priority value="ALL"/> 
         <appender-ref ref="STDOUT" /> 
      </root> 
     

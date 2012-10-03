@@ -106,7 +106,7 @@ public class NplServiceFreeLingImpl implements NplService {
 
 	@Override
 	public synchronized NplResponse analize(NplRequest nplRequest)
-			throws HQLException {
+			throws Exception {
 		log.info("Ejecutando analize " + nplRequest);
 
 		ListWord l = tk.tokenize(nplRequest.getText());
@@ -133,7 +133,7 @@ public class NplServiceFreeLingImpl implements NplService {
 
 	@Transactional
 	private NplResponse process(List<Word> analyzeWords, NplRequest nplRequest)
-			throws HQLException {
+			throws Exception {
 
 		HashMap<String, String> values = new HashMap<String, String>();
 
@@ -402,10 +402,8 @@ public class NplServiceFreeLingImpl implements NplService {
 						} else {
 							nplRequestId = nplRequestDAO.saveNplRequest(nplRequest);
 							nplResponse.setResponseType("link");
-							values.put("simpleText", "Click para ver la lista");
-							values.put("url", "/chart.html?queryId=" + nplRequestDAO);
-							nplResponse.setResponseData(jdbcTemplate
-									.queryForList(sqlActual));
+							values.put("simpleText", "Click para ver el grafico");
+							values.put("url", "/chart.html?queryId=" + nplRequestId);
 							// TODO: Me falta guardar la consulta en la base
 							// para ejecutar despues.....
 						}
@@ -516,7 +514,7 @@ public class NplServiceFreeLingImpl implements NplService {
 	}
 
 	@Override
-	public NplResponse analizeBySavedQuery(Long queryId) throws HQLException {
+	public NplResponse analizeBySavedQuery(Long queryId) throws Exception {
 		NplRequest nplRequest = nplRequestDAO.getNplRequestById(queryId);
 		nplRequest.setUserAgent("saved-query");
 		return this.analize(nplRequest);
