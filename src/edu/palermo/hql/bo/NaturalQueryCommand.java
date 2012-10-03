@@ -4,11 +4,19 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 
+import org.hibernate.search.annotations.DocumentId;
+import org.hibernate.search.annotations.Field;
+import org.hibernate.search.annotations.Index;
+import org.hibernate.search.annotations.Indexed;
+import org.hibernate.search.annotations.Store;
+
 @Entity
+@Indexed
 public class NaturalQueryCommand {
 
 	@Id
 	@GeneratedValue
+	@DocumentId
 	public Long getId() {
 		return id;
 	}
@@ -18,6 +26,8 @@ public class NaturalQueryCommand {
 	}
 	
 	private Long id;
+	
+	@Field(index = Index.TOKENIZED, store = Store.YES)
 	public String getName() {
 		return name;
 	}

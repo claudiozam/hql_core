@@ -31,7 +31,7 @@ public class HqlMainController {
 	private NaturalQueryService naturalQueryService;
 	
 	@RequestMapping(value="/index", method=RequestMethod.GET)
-	public String index() {
+	public String index() throws InterruptedException {
 		naturalQueryService.reIndexFTSAllObjets();
 		return "/hqlmain/index";
 	}

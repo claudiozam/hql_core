@@ -11,6 +11,10 @@ $(function() {
 		return split( term ).pop();
 	}
 
+	$('#chartOutput').hide();
+	$('#divOutput').hide();
+	$('#target_table_id').hide();	
+	
 	$( "#textToanalize" )
 		// don't navigate away from the field on tab when selecting an item
 		.bind( "keydown", function( event ) {
@@ -68,6 +72,7 @@ function executeList(queryId) {
 		        tbl_body += "<tr>"+tbl_row+"</tr>";                 
 		    });
 		    $("#target_table_id").html(tbl_body);
+		    $("#target_table_id").show();
 		}
 	});
 }
@@ -106,6 +111,7 @@ function executeGraph(queryId) {
 		      legend: { show:true, location: 'w' }
 		      }
 		    );
+		    $('#chartOutput').show();
 		}
 	});
 }
@@ -113,6 +119,7 @@ function executeGraph(queryId) {
 function updateLog(request, answer){
 	$("#ul_log").append("<li class='bubbledLeft'>"+request+"</li>");
 	$("#ul_log").append("<li class='bubbledRight'>"+answer+"</li>");
+	$("#ul_log").scrollTop($("#ul_log").scrollHeight);
 	$('#textToanalize').val('');
 }
 
@@ -122,13 +129,16 @@ function executeAnalize() {
 	$.getJSON('analize.html', nplRequest, function(nplResponse) {
 		var data = nplResponse.responseData;
 		if(nplResponse.responseType == 'text') {
-			$('#target_table_id').empty();
-			$('#chartOutput').empty();
+			$('#target_table_id').hide();
+			$('#chartOutput').hide();
+			$('#divOutput').show();
 			$('#divOutput').html(data.simpleText);
 			updateLog($('#textToanalize').val(),data.simpleText);
 		} else if(nplResponse.responseType == 'list') {
-			$("#divOutput").empty();
-			$('#chartOutput').empty();
+			$('#chartOutput').hide();
+			$('#divOutput').hide();
+			$('#target_table_id').show();
+			
 			var tbl_body = "";
 			var tbl_row = "";
 	        $.each(data[0], function(k , v) {
@@ -145,8 +155,9 @@ function executeAnalize() {
 		    $("#target_table_id").html(tbl_body);
 		    updateLog($('#textToanalize').val(),'Listando..');
 		} else if(nplResponse.responseType == 'pie-chart') {
-			$('#divOutput').empty();
-			$('#target_table_id').empty();
+			$('#chartOutput').show();
+			$('#divOutput').hide();
+			$('#target_table_id').hide();
 			var data = nplResponse.responseData;
 			var small = new Array();
 			var tmp;
@@ -177,6 +188,7 @@ function executeAnalize() {
 		      },
 		      legend: { show:true, location: 'w' }
 		    });
+			$("#chartOutput").offset({top : $("#td_result").offset().top })
 		    updateLog($('#textToanalize').val(),'Graficando..');
 		}
 	});

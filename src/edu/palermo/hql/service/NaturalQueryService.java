@@ -44,7 +44,7 @@ public class NaturalQueryService {
 		return dataEntityDAO.findDataEntitieByAlias(alias);
 	}
 	
-	public void reIndexFTSAllObjets() {
+	public void reIndexFTSAllObjets() throws InterruptedException {
 		dataEntityDAO.reIndexFTS();
 	}
 	

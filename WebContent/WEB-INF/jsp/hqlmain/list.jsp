@@ -30,9 +30,7 @@
     </div> <!-- /container -->
 
       <script type="text/javascript">
-    	$(function() {
-    		executeList(${queryId});
-    	});
+
         setTimeout(function(){executeList(${queryId});},1000);
     </script>
  

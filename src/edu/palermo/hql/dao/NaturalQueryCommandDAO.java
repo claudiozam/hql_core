@@ -7,5 +7,5 @@ public interface NaturalQueryCommandDAO {
 
 	public List<NaturalQueryCommand> getNaturalQueryCommands();
 	public List<NaturalQueryCommand> getNaturalQueryCommands(String type);
-
+	public NaturalQueryCommand getNaturalQueryCommandByName(String name);
 }
