@@ -31,6 +31,13 @@ public class Query {
 			ArrayList<String> operadoresLogicos, ArrayList<String> funciones){
 	
 		String generatedSql = "";
+		
+		ArrayList<String> mascaraCondiciones = new ArrayList<String>();
+		ArrayList<String> mascaraValores = new ArrayList<String>();
+		
+		mascaraValores.add("");
+		mascaraCondiciones.add("SP DA NC SP "); // de la carrera de
+		mascaraCondiciones.add("(PR|S) NC VSI AQ SP "); // donde carrera es igual a
 	
 		/* ----------------------------------------------------------------*/
 		/*                             SELECT                              */
@@ -94,8 +101,10 @@ public class Query {
 		} else if (comando.equalsIgnoreCase("contar")) {
 			//Por ahora solo una funcion de agregado
 			select += funciones.get(0).toString() + "(" + campoCount + ") ";
+			/*
 		} else if (funciones.get(0).equalsIgnoreCase("graficar")) {
 			select += camposSelect  + " ";
+			*/
 		} else {
 			select = "";
 		}
