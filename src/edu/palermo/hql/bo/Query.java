@@ -101,10 +101,10 @@ public class Query {
 		} else if (comando.equalsIgnoreCase("contar")) {
 			//Por ahora solo una funcion de agregado
 			select += funciones.get(0).toString() + "(" + campoCount + ") ";
-			/*
-		} else if (funciones.get(0).equalsIgnoreCase("graficar")) {
-			select += camposSelect  + " ";
-			*/
+			
+		} else if (comando.equalsIgnoreCase("graficar")) {
+			select += camposSelect + ", " + funciones.get(0).toString() + "(" + camposSelect + ") as value ";
+			
 		} else {
 			select = "";
 		}
@@ -177,9 +177,9 @@ public class Query {
 	//GROUP BY
 	//*****************************************************************************************************************
 	private String generateGroupByClause(ArrayList<String> camposGroupBy){
-		String groupByClause = "GROUP BY ";
+		String groupByClause = " GROUP BY ";
 		for (int i = 0; i < camposGroupBy.size(); i++) {
-			sql += camposGroupBy.get(i).toString();
+			groupByClause += camposGroupBy.get(i).toString();
 		}
 		return groupByClause;
 	}

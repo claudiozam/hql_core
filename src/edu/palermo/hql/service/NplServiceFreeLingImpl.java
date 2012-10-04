@@ -218,6 +218,7 @@ public class NplServiceFreeLingImpl implements NplService {
 					comandoActual = "listar";
 				} else if (preForm.equalsIgnoreCase("graficar")) {
 					comandoActual = "graficar";
+					funciones.add("COUNT");
 				} else if (preForm.equalsIgnoreCase("contar")) {
 					comandoActual = "contar";
 					funciones.add("COUNT");
@@ -414,9 +415,22 @@ public class NplServiceFreeLingImpl implements NplService {
 			if (dataEntity != null) {
 				mascaraActual = mascaraActual.trim();
 				log.info("Mascara: " + mascaraActual);
+
+				// *******************************************************
+				// TODO: FEISIMO!!!!
+				String camposSelect = "";
+				if (comandoActual.equalsIgnoreCase("graficar")) {
+					camposGroupBy.add(dataEntity.getGroupColumn());
+					camposSelect = dataEntity.getGroupColumn();
+				} else{
+					camposSelect = dataEntity.getColummns();	
+				}
+					
+				// *******************************************************
+				
 				
 				/* **************************** Generar SQL ********************************* */
-				Query query = new Query(comandoActual, mascaraActual, dataEntity.getColummns(), 
+				Query query = new Query(comandoActual, mascaraActual, camposSelect, 
 										dataEntity.getCountColumn(),  entidadActual, camposWhere, 
 										operadores, valores, camposOrderBy, camposGroupBy, 
 										operadoresLogicos, funciones);
@@ -451,11 +465,14 @@ public class NplServiceFreeLingImpl implements NplService {
 					/* ----------------------------------------------------------------*/
 					} else if (comandoActual.equalsIgnoreCase("graficar")) {
 						nplResponse.setResponseType("pie-chart");
+						
+						/*
 						sqlActual = "select " + dataEntity.getGroupColumn()
 								+ ", count(" + dataEntity.getGroupColumn()
 								+ ") as value" + " from "
 								+ dataEntity.getTables() + " group by "
 								+ dataEntity.getGroupColumn();
+						*/
 						if (!isFromMobile) {
 							nplResponse.setResponseData(jdbcTemplate.queryForList(sqlActual));
 						} else {
