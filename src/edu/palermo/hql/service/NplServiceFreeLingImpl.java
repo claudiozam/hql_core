@@ -7,13 +7,14 @@ import java.util.List;
 import javax.sql.DataSource;
 
 import org.apache.log4j.Logger;
-import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import edu.palermo.hql.bo.Programming;
 import edu.palermo.hql.bo.DataEntity;
+import edu.palermo.hql.bo.Language;
 import edu.palermo.hql.bo.NaturalQueryCommand;
 import edu.palermo.hql.bo.NplRequest;
 import edu.palermo.hql.bo.NplResponse;
@@ -74,8 +75,6 @@ public class NplServiceFreeLingImpl implements NplService {
 
 	private void init() {
 		log.info("Cargando freeling.....");
-		
-		
 		
 		// System.loadLibrary("libfreeling_javaAPI");
 		System.load("/home/hql/myfreeling/APIs/java/libfreeling_javaAPI.so");
@@ -141,60 +140,45 @@ public class NplServiceFreeLingImpl implements NplService {
 	}
 
 	@Transactional
-	private NplResponse process(List<Word> analyzeWords, NplRequest nplRequest)
-			throws Exception {
+	private NplResponse process(List<Word> analyzeWords, NplRequest nplRequest) throws Exception {
 
 		HashMap<String, String> values = new HashMap<String, String>();
 
 		boolean isFromMobile = GeneralUtils.checkIsMobile(nplRequest.getUserAgent());
 
-		String mascaraActual = "";
-		String comandoActual = "";
-		String entidadActual = "";
-		// String filtroActual = "";
-		String shortTag = "";
-		String form = "";
-
-		String sqlActual = "";
-
 		String tag = "";
+		String form = "";
 		String lemma = "";
-
-
-		ArrayList<String> funciones = new ArrayList<String>();
-		ArrayList<String> operadores = new ArrayList<String>();
-		ArrayList<String> operadoresLogicos = new ArrayList<String>();
+		String shortTag = "";
 		
-		ArrayList<String> valores = new ArrayList<String>();
-		ArrayList<String> entidades = new ArrayList<String>();
-		ArrayList<String> camposWhere = new ArrayList<String>();
-
-		ArrayList<String> camposOrderBy = new ArrayList<String>();
-		ArrayList<String> camposGroupBy = new ArrayList<String>();
+		String sqlActual = "";
+		String mascaraActual = "";
+		int indicePalabraActual = 0;
 		
-		Integer dia = 0;
-		Integer mes = 0;
-		Integer anio = 0;
-		Integer horas = 0;
-		Integer minutos = 0;
-		
-		boolean requiereOrderBy = false;
+		ArrayList<String> wordCollection = new ArrayList<String>();
+		HashMap<Integer, String> wordType = new HashMap<Integer, String>();
+		HashMap<Integer, String> nplAnalysis = new HashMap<Integer, String>();
 
+		boolean tieneOrdenamiento = false;
+		// -------------------------------------------------------------------------------
+		// Para validar si una palabra es parecida a un campoWhere
+		HashMap<String, String> possibleDataEntityColumns = new HashMap<String, String>();
+		ArrayList<String> possibleEntities = new ArrayList<String>();
+		// -------------------------------------------------------------------------------
+		
 		// -----------------------------------------------------------
-
 		NplResponse nplResponse = new NplResponse();
 		long id = 12345678;
 		nplResponse.setId(id);
 		nplResponse.setResponseType("text");
 		nplResponse.setResponseData(values);
+		// -----------------------------------------------------------
 
 		JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
 
-		// ----------------------------------------------------------------------------------
-		// Comienzo del FOR
-		// ----------------------------------------------------------------------------------
+		
 		for (Word w : analyzeWords) {
-
+			
 			tag = w.getTag();
 			form = w.getForm();
 			lemma = w.getLemma();
@@ -202,254 +186,243 @@ public class NplServiceFreeLingImpl implements NplService {
 
 			mascaraActual += shortTag + " ";
 			log.info("shortTag => " + shortTag);
-			/* ****************************** Verbos ************************************ */
-			if (shortTag.startsWith("VM") || shortTag.startsWith("AQ")) {
-				/* ----------------------------------------------------------------*/		
-				/*                           COMANDOS                              */
-				/* ----------------------------------------------------------------*/
+			
+			String funcion = "";
+			String palabra = form;
+			
+			int indicePalabraAnterior = indicePalabraActual - 1;
+			
+			/* *************************************************************************** */
+			Language idioma = new Language(LANG);
+			
+			// Obtener Tipo de Palabra
+			wordType.put(indicePalabraActual, idioma.getWordType(shortTag));
+			
+			if (wordType.get(indicePalabraActual).equalsIgnoreCase("Verbo")){
 				String preForm = form;
-				NaturalQueryCommand naturalQueryCommand = naturalQueryCommandDAO.getNaturalQueryCommandByName(form);
+				NaturalQueryCommand naturalQueryCommand = naturalQueryCommandDAO.getNaturalQueryCommandByName(preForm);
 				if(naturalQueryCommand!= null) {
 					preForm = naturalQueryCommand.getName();
 					log.info("FTS => Cambiando " + form + " por " + preForm);
+					if (idioma.isAValidCommand(preForm)){
+						funcion = "comando";
+						palabra = preForm;
+					} 
 				}
-				
-				if (preForm.equalsIgnoreCase("listar")) {
-					comandoActual = "listar";
-				} else if (preForm.equalsIgnoreCase("graficar")) {
-					comandoActual = "graficar";
-					funciones.add("COUNT");
-				} else if (preForm.equalsIgnoreCase("contar")) {
-					comandoActual = "contar";
-					funciones.add("COUNT");
-				} else if (preForm.equalsIgnoreCase("sumar")) {
-					//comandoActual = "sumar";
-					funciones.add("SUM");
+				// Ordenamiento
+				log.info("Paso 1");
+				if (lemma.equalsIgnoreCase("ordenar")) {
+					log.info("Paso 2");
+					tieneOrdenamiento = true;
 				}
-			} else if(shortTag.startsWith("VMP")){
-				/* ----------------------------------------------------------------*/		
-				/*                        FLAG ORDER BY                            */
-				/* ----------------------------------------------------------------*/
-				if (lemma.equalsIgnoreCase("ordenar")){
-					requiereOrderBy = true;
-				}
-			}
-			/* ****************************** Nombres *********************************** */
-			else if (shortTag.startsWith("N")) {
-				if (entidades.isEmpty()) {
-					/* ----------------------------------------------------------------*/		
-					/*                          ENTIDADES                              */
-					/* ----------------------------------------------------------------*/
-					DataEntity dataEntity = dataEntityDAO.findDataEntitieByAlias(form); //Buscamos Fuzzy para ver si encuentra algo igual....
-					if(dataEntity!=null) {
-						log.info("FTS => Cambiando " + form + " por " + dataEntity.getAlias());
-						entidades.add(dataEntity.getAlias());
-						entidadActual = dataEntity.getAlias();
-					} else {
-						entidades.add(form);
-						entidadActual = entidades.get(0).toString();
-					}
+			/* *************************************************************************** */
+			} else if (wordType.get(indicePalabraActual).equalsIgnoreCase("Nombre")){
+				DataEntity dataEntity = dataEntityDAO.findDataEntitieByAlias(form); //Buscamos Fuzzy para ver si encuentra algo igual....
+				if (dataEntity!=null) {
+					// Es una posible Entidad
+					log.info("FTS => Cambiando " + form + " por " + dataEntity.getAlias());
 					
-				} else if (!entidades.isEmpty() && camposWhere.isEmpty() && requiereOrderBy == false){
-					/* ----------------------------------------------------------------*/		
-					/*                        CAMPOS WHERE                             */
-					/* ----------------------------------------------------------------*/
-					camposWhere.add(form);	
-				} else if (!entidades.isEmpty() && !camposWhere.isEmpty() && requiereOrderBy == false){
-					/* ----------------------------------------------------------------*/		
-					/*                           VALORES                               */
-					/* ----------------------------------------------------------------*/
-					if (shortTag.startsWith("NC") && form.equalsIgnoreCase("ayer")){
-						// AYER
-						DateTime dt = new DateTime(DateTime.now());
-						dt = dt.plusDays(-1);
-						log.info("Fecha JODA: " + dt.toString("yyyy-MM-dd"));
-						valores.add(dt.toString("yyyy-MM-dd"));
-					} else {
-						valores.add(form);
+					funcion = "entidad";
+					palabra = dataEntity.getAlias();
+					
+					possibleDataEntityColumns.put(dataEntity.getAlias(), dataEntity.getColummns());
+					possibleEntities.add(dataEntity.getAlias());
+					
+					
+					
+				} else {
+					log.info("Paso 3");
+					if (!tieneOrdenamiento){
+						//String funcion = "";
+						boolean esCampoWhere = false;
+						for (int i = 0; i < possibleEntities.size(); i++){
+							String[] s = possibleDataEntityColumns.get(possibleEntities.get(i)).split(",");
+							
+							for (int j = 0; j < s.length; j++){
+								String a = s[j].trim();
+								String b = form.trim();
+								
+								if (b.equalsIgnoreCase(a)){
+									
+									if (funcion.equalsIgnoreCase("")){
+										funcion += "campoWhere";
+										esCampoWhere = true;
+									} else {
+										funcion += ",campoWhere";	
+									}
+								}		
+							} // fin del for
+						} // fin del for
+					
+						if (!nplAnalysis.containsKey(indicePalabraActual) && !esCampoWhere){
+							if (funcion.equalsIgnoreCase("")){
+								funcion += "valorWhere";
+							} else {
+								funcion += ",valorWhere";	
+							}
+						} 
 					}
-				} else if (requiereOrderBy == true){
-					/* ----------------------------------------------------------------*/		
-					/*                      CAMPOS ORDER BY                            */
-					/* ----------------------------------------------------------------*/
-					// Si se proceso previamente la palabra "ordenar" empiezo a guardar los campos en otro Array
-					camposOrderBy.add(form);
-					// -------------------------------------------------------------
+					else if (tieneOrdenamiento) {
+						// Ordenamiento
+						log.info("Paso 4: "  + funcion);
+						
+						if (funcion.equalsIgnoreCase("")){
+							funcion += "camposOrderBy";
+						} else {
+							funcion += ",camposOrderBy";	
+						}
+						
+					} // fin del if
+					
+					log.info("Paso 5: " + funcion);
 				}
-			}
-			/* ***************************** Advervios ********************************** */
-			else if(shortTag.startsWith("R")){
-				if (form.equalsIgnoreCase("hoy")){
-					// --------------------------------------------------
-					// HOY
-					// --------------------------------------------------
-					DateTime dt = new DateTime(DateTime.now());
-					log.info("Fecha JODA: " + dt.toString("yyyy-MM-dd"));
-					valores.add(dt.toString("yyyy-MM-dd"));
-				} else if (form.equalsIgnoreCase("ayer")){
-					// --------------------------------------------------
-					// AYER
-					// --------------------------------------------------
-					DateTime dt = new DateTime(DateTime.now());
-					dt.plusDays(-1);
-					log.info("Fecha JODA: " + dt.toString("yyyy-MM-dd"));
-					valores.add(dt.toString("yyyy-MM-dd"));
-					// --------------------------------------------------
-				} else if (form.equalsIgnoreCase("mes")){
-					// MES
-				} else if (form.equalsIgnoreCase("año")){
-					// AÑO
-				}
-			}
-			/* *************************** Preposiciones ******************************** */
-			else if (shortTag.startsWith("S")) {
-				/* ----------------------------------------------------------------*/		
-				/*                  OPERADORES DE COMPARACION                      */
-				/* ----------------------------------------------------------------*/
-				// TODO: Me falta chequear cuales estan funcionando actualmente
+			/* *************************************************************************** */				
+			} else if (wordType.get(indicePalabraActual).equalsIgnoreCase("Adverbio")){
+				palabra = idioma.convertDate(form, "R");
+			/* *************************************************************************** */
+			} else if (wordType.get(indicePalabraActual).equalsIgnoreCase("Preposicion")){
 				if (form.equalsIgnoreCase("de")) {
-					if (camposWhere.size() == 1) {
-						operadores.add("=");
-					} else if (form.equalsIgnoreCase("entre")) {
-						operadores.add("BETWEEN");
+					if (wordType.get(indicePalabraAnterior).equalsIgnoreCase("Nombre")){
+						if (nplAnalysis.containsKey(indicePalabraAnterior)){
+							if (nplAnalysis.get(indicePalabraAnterior).equalsIgnoreCase("campoWhere")){
+								funcion = "operadorComparacion";
+								palabra = " = ";
+							} 
+						}
 					}
 				}
+			/* *************************************************************************** */	
+			} else if (wordType.get(indicePalabraActual).equalsIgnoreCase("Adjetivo")){
+				palabra = idioma.convertAdjective(form);
+				int palabraAnterior = indicePalabraActual - 1;
+				if (!palabra.equalsIgnoreCase("")){
+					funcion = "operadorComparacion";	
+				} else {
+					if (shortTag.equalsIgnoreCase("AQ")){
+						if (wordCollection.get(palabraAnterior).equalsIgnoreCase("de")){
+							funcion = "valorWhere";		
+						}
+					}
+				}
+			/* *************************************************************************** */				
+			} else if (wordType.get(indicePalabraActual).equalsIgnoreCase("Determinante")){
+				if (wordCollection.contains(indicePalabraAnterior)){
+					if (wordCollection.get(indicePalabraAnterior).equalsIgnoreCase("de") && form.equalsIgnoreCase("la")){
+					}
+				}
+			/* *************************************************************************** */
+			} else if (wordType.get(indicePalabraActual).equalsIgnoreCase("Pronombre")){
 				
-				if (tag.startsWith("SPS00")) {
-					if (form.equalsIgnoreCase("a")) {
-					} else if (form.equalsIgnoreCase("con")) {
-					} else if (form.equalsIgnoreCase("hasta")) {
-						operadores.add("<=");
-					} else if (form.equalsIgnoreCase("desde")) {
-						operadores.add(">=");
-					} else if (form.equalsIgnoreCase("entre")) {
-						operadores.add("BETWEEN");
-					}
+			/* *************************************************************************** */	
+			} else if (wordType.get(indicePalabraActual).equalsIgnoreCase("Conjuncion")){
+				if (idioma.getLogicalOperation(form).equalsIgnoreCase("conjuncion")){
+					funcion = "operadoresLogicos";
+					palabra = "AND";
+					
+				} else if (idioma.getLogicalOperation(form).equalsIgnoreCase("disyuncion")){
+					funcion = "operadoresLogicos";
+					palabra = "OR";
 				}
-			}
-			/* ***************************** Adjetivos ********************************** */
-			else if (shortTag.startsWith("A")) {
-				if (form.equalsIgnoreCase("igual")) { 
-					operadores.add(" = ");
-				} else if (form.equalsIgnoreCase("mayor")) {
-					operadores.add(" > ");
-				} else if (form.equalsIgnoreCase("menor")) {
-					operadores.add(" < ");
-				}
-			}
-			/* **************************** Pronombres ********************************** */
-			else if (shortTag.startsWith("P")) {
-				// Esta parte la controlo con las mascaras, por ahora no se usa
-			}
-			/* *************************** Conjunciones ********************************* */
-			else if (shortTag.startsWith("C")) {
-				if (shortTag.startsWith("CC")) {
-					/* ----------------------------------------------------------------*/		
-					/*                       OPERADORES LOGICOS                        */
-					/* ----------------------------------------------------------------*/
-					if (form.equalsIgnoreCase("y") || form.equalsIgnoreCase("e")){
-						operadoresLogicos.add(" AND ");
-					}
-					else if (form.equalsIgnoreCase("o") || form.equalsIgnoreCase("u")){
-						operadoresLogicos.add(" OR ");
-					}
-					log.info("operadoresLogicos: " + form);
-				}
-			}
-			/* *********************** Signos de Puntuacion ***************************** */
-			else if (shortTag.startsWith("F")){
-				// Por ahora solo usamos una sola oracion
-			}
-			/* ************************ Cifras y Numerales ****************************** */
-			else if (shortTag.startsWith("Z")) {
-				/* ----------------------------------------------------------------*/		
-				/*                       VALORES NUMERICOS                         */
-				/* ----------------------------------------------------------------*/
-				valores.add(lemma);
-			}
-			/* ****************************** Fechas ************************************ */
-			else if (shortTag.startsWith("W")) {
-				/* ----------------------------------------------------------------*/		
-				/*                      VALORES TIPO FECHA                         */
-				/* ----------------------------------------------------------------*/
-				// El lemma viene con corchetes, los reemplazo para poder hacer un split
-				String[] arrayFecha = lemma.replace("([|])", "").split(":");	
-				// Recorro el array para encontrar la parte del lemma que tiene la fecha
-				for (int i = 0; i < arrayFecha.length; i++) {
-					if (i == 1) {
-						// La posicion 1 tiene la fecha en formato dd/mm/yyyy
-						// Si NO se informa el dia el lemma viene con formato ??/mm/yyyy 
-						//para evitar que pinche hacemos un replace
-						String s = arrayFecha[1].replace("??", "01").toString();
-						String[] f = s.split("/");
-						// Guardo valores para crear la fecha JODA
-						dia = Integer.parseInt(f[0].toString());
-						mes = Integer.parseInt(f[1].toString());
-						anio = Integer.parseInt(f[2].toString());
-						// Falta esta parte
-						horas = 0;
-						minutos = 0;
-					}
-				}
-				// Fecha JODA
-				DateTime dt = new DateTime(anio, mes, dia, horas, minutos);
-				log.info("Fecha JODA: " + dt.toString("yyyy-MM-dd"));
+			/* *************************************************************************** */
+			} else if (wordType.get(indicePalabraActual).equalsIgnoreCase("SignoDePuntuacion")){
+			
+			/* *************************************************************************** */
+			} else if (wordType.get(indicePalabraActual).equalsIgnoreCase("Numero")){
+				funcion = "valorWhere";
 				
-				valores.add(dt.toString("yyyy-MM-dd"));
+			/* *************************************************************************** */
+			} else if (wordType.get(indicePalabraActual).equalsIgnoreCase("Fecha")){
+				// Una fecha (con formato de fecha) es si o si un valor para el WHERE
+				funcion = "valorWhere";
+				palabra = idioma.convertDate(lemma, "W");
+				//palabra = lemma;
+			/* *************************************************************************** */
+			} else{
+
 			}
-			/* ************************************************************************** */
-			else {
-				log.warn("No se puede procesar la palabra: " + form + " short tag: " + shortTag);
-			}
-		}
-		// ----------------------------------------------------------------------------------
-		// Fin del FOR
-		// ----------------------------------------------------------------------------------
+			
+			wordCollection.add(palabra);
+			nplAnalysis.put(indicePalabraActual, funcion);
+			
+			indicePalabraActual = indicePalabraActual + 1;
+			
+		} // Fin del FOR
 		
 		// ya tengo las palabras base ahora tengo que hacer la consulta......
 		// ?????????????????????????????????????????????????????????????????
-		if (comandoActual != "") {
-			long nplRequestId = 0; 
-			DataEntity dataEntity = naturalQueryService.findDataEntitieByAlias(entidadActual);
-		
-			if (dataEntity != null) {
-				mascaraActual = mascaraActual.trim();
-				log.info("Mascara: " + mascaraActual);
 
+		DataEntity dataEntity = naturalQueryService.findDataEntitieByAlias(wordCollection.get(1).toString());
+		
+		Programming prog = new Programming(wordCollection, wordType, nplAnalysis, mascaraActual, LANG, dataEntity);
+
+		log.info("------------------------------------------------------------------------");
+		String resultado = String.format("%1$-4s","|ID") +
+							String.format("%1$-6s","| Tag") +
+							String.format("%1$-16s","| Word") +
+							String.format("%1$-20s","| Type: ") +
+							String.format("%1$-26s","| Function ") + "|";
+		
+		log.info(resultado);
+		log.info("------------------------------------------------------------------------");
+		for (int i = 0; i < prog.getAnalysisResults().size(); i++){
+			log.info(prog.getAnalysisResults().get(i));
+		}
+		log.info("------------------------------------------------------------------------");
+		
+		// **************************************************************************
+		
+		if (prog.getData().containsKey("comando")) {
+			
+			long nplRequestId = 0;
+			//DataEntity dataEntity = naturalQueryService.findDataEntitieByAlias(bp.getData().get("entidad"));
+			//if (dataEntity != null) {
+			if (!prog.getData().isEmpty()) {
+				
 				// *******************************************************
 				// TODO: FEISIMO!!!!
-				String camposSelect = "";
-				if (comandoActual.equalsIgnoreCase("graficar")) {
-					camposGroupBy.add(dataEntity.getGroupColumn());
-					camposSelect = dataEntity.getGroupColumn();
-				} else{
-					camposSelect = dataEntity.getColummns();	
+				/*
+				if (bp.getData().get("comando").equalsIgnoreCase("graficar")) {
+					bp.getData().put("camposGroupBy", dataEntity.getGroupColumn());
+					bp.getData().put("campoSelect", dataEntity.getCountColumn());
+					bp.getData().put("funcAgregado", "COUNT");
+				} else {
+					bp.getData().put("camposSelect", dataEntity.getColummns());
 				}
-					
+				*/
+				//bp.getData().put("campoCount", dataEntity.getCountColumn());
 				// *******************************************************
 				
+				log.info("------------------------------------------------------------------------");
+				log.info("Mascara         : " + prog.getData().get("mascara"));
+				log.info("Comando         : " + prog.getData().get("comando")); 
+				log.info("Entidad         : " + prog.getData().get("entidad"));
+				log.info("Campos SELECT   : " + prog.getData().get("camposSelect"));
+				log.info("Condiciones     : " + prog.getData().get("condiciones"));
+				log.info("Op. Logicos     : " + prog.getData().get("operadoresLogicos"));
+				log.info("Campos GROUP BY : " + prog.getData().get("camposGroupBy"));
+				log.info("Campos ORDER BY : " + prog.getData().get("camposOrderBy"));
+				log.info("Func. Agregado  : " + prog.getData().get("funcAgregado"));
+				log.info("------------------------------------------------------------------------");
 				
 				/* **************************** Generar SQL ********************************* */
-				Query query = new Query(comandoActual, mascaraActual, camposSelect, 
-										dataEntity.getCountColumn(),  entidadActual, camposWhere, 
-										operadores, valores, camposOrderBy, camposGroupBy, 
-										operadoresLogicos, funciones);
-				sqlActual = query.getSql();
-				log.info("SQL Generado: " + sqlActual);
+				Query query = new Query(prog.getData());
 				/* ************************************************************************** */
 				
-				if (sqlActual != null) {
+				sqlActual = query.getSql();
+				log.info("SQL Generado: " + sqlActual);
+				
+				if (sqlActual != null && !sqlActual.equalsIgnoreCase("")) {
 					/* ----------------------------------------------------------------*/		
 					/*                            CONTAR                               */
 					/* ----------------------------------------------------------------*/
-					if (comandoActual.equalsIgnoreCase("contar")) {
+					if (prog.getData().get("comando").equalsIgnoreCase("contar")) {
 						int countEntidad = jdbcTemplate.queryForInt(sqlActual);
 						values.put("simpleText", "El resultado es " + countEntidad);
 						nplResponse.setResponseData(values);
 					/* ----------------------------------------------------------------*/		
 					/*                            LISTAR                               */
 					/* ----------------------------------------------------------------*/
-					} else if (comandoActual.equalsIgnoreCase("listar")) {
+					} else if (prog.getData().get("comando").equalsIgnoreCase("listar")) {
 						nplResponse.setResponseType("list");
 						if (!isFromMobile) {
 							nplResponse.setResponseData(jdbcTemplate.queryForList(sqlActual));
@@ -463,16 +436,9 @@ public class NplServiceFreeLingImpl implements NplService {
 					/* ----------------------------------------------------------------*/		
 					/*                           GRAFICAR                              */
 					/* ----------------------------------------------------------------*/
-					} else if (comandoActual.equalsIgnoreCase("graficar")) {
+					} else if (prog.getData().get("comando").equalsIgnoreCase("graficar")) {
 						nplResponse.setResponseType("pie-chart");
 						
-						/*
-						sqlActual = "select " + dataEntity.getGroupColumn()
-								+ ", count(" + dataEntity.getGroupColumn()
-								+ ") as value" + " from "
-								+ dataEntity.getTables() + " group by "
-								+ dataEntity.getGroupColumn();
-						*/
 						if (!isFromMobile) {
 							nplResponse.setResponseData(jdbcTemplate.queryForList(sqlActual));
 						} else {
@@ -486,6 +452,8 @@ public class NplServiceFreeLingImpl implements NplService {
 						}
 					}
 					/* ----------------------------------------------------------------*/
+				} else{
+					log.info("No se pudo generar la consulta SQL.");			
 				} 
 			}	
 		} 
@@ -501,4 +469,5 @@ public class NplServiceFreeLingImpl implements NplService {
 		nplRequest.setUserAgent("saved-query");
 		return this.analize(nplRequest);
 	}
+		
 }

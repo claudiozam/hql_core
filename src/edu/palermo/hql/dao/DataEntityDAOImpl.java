@@ -68,8 +68,7 @@ public class DataEntityDAOImpl implements DataEntityDAO {
 		}
 		return null;
 	}
-
-
+	
 	@Override
 	public void reIndexFTS() throws InterruptedException {
 		System.out.println("Ejecutando reIndexFTS");
