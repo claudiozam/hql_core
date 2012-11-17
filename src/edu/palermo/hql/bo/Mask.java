@@ -3,13 +3,7 @@ package edu.palermo.hql.bo;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import org.apache.log4j.Logger;
-
-import edu.palermo.hql.service.NplServiceFreeLingImpl;
-
 public class Mask {
-	
-	private static Logger log = Logger.getLogger(NplServiceFreeLingImpl.class);
 	
 	private String mascara;
 
@@ -17,15 +11,23 @@ public class Mask {
 	private HashMap<Integer, String> tagAnalysis = new HashMap<Integer, String>();
 
 	/* ******************************************************************************************** */
-
 	public Mask(String mask){
 		// Este objeto NO reconoce palabras!!!
 		this.mascara = mask;
-		this.analize();
-	}
-	
+		// ***************************************************************************
+		//this.analize();
+		// ***************************************************************************
+		this.tagCollection = this.convertStringInHashMap(this.mascara, " ");
+		for (int i = 0; i < this.tagCollection.size(); i++){
+			String tag = this.tagCollection.get(i);
+			// getPossibleFunctions
+			String possibleFunctions = this.convertArrayListInString(this.getPossibleFunctions(i, tag), ",");
+			this.tagAnalysis.put(i, possibleFunctions);
+		}
+		// ***************************************************************************
+	}	
 	/* ******************************************************************************************** */
-		
+	/*
 	private void analize(){
 		// Separamos la mascara en un HashMap de etiquetas
 		this.tagCollection = this.convertStringInHashMap(this.mascara, " ");
@@ -35,42 +37,20 @@ public class Mask {
 			this.tagAnalysis.put(i, possibleFunctions);
 		}
 	}
-	
-	/* ******************************************************************************************** */
-
-	/*
-	private ArrayList<String> getOrderByPatterns(){
-		ArrayList<String> mascaraCondiciones = new ArrayList<String>();
-
-		mascaraCondiciones.add("VMP SP "); // ordenado por
-		
-		return mascaraCondiciones;
-	}
 	*/
+	/* ******************************************************************************************** */
 	
 	private ArrayList<String> getConditionPatterns(){
 		ArrayList<String> mascaraCondiciones = new ArrayList<String>();
-
 		mascaraCondiciones.add("SP DA NC SP "); // de la carrera de
 		mascaraCondiciones.add("(PR|S) NC VSI AQ SP "); // donde carrera es igual a
 		mascaraCondiciones.add("SP DA NC SP AQ CC NC "); // de la carrera de XXX y ZZZ 
-		
 		return mascaraCondiciones;
 	}
 	
 	private ArrayList<String> getWhereValuePatterns(){
 		ArrayList<String> mascaraCondiciones = new ArrayList<String>();
-
-		/* 
-		
-		"NC" = valorNombre       | "NC CC NC" valorNombre1       o valorNombre2
-		"NP" = valorNombrePropio | "NP CC NP" valorNombrePropio1 o valorNombrePropio2
-		"Z"  = valorNumerico     | "Z CC Z"   valorNumerico1     o valorNumerico2
-		"W"  = valorFecha        | "W CC W"   valorFecha1        o valorFecha2
-		
-		*/
 		mascaraCondiciones.add("((NC|NC CC (NC|RG))|(NP|NP CC NP)|(Z|Z CC Z)|(W|W CC W))"); 
-		
 		return mascaraCondiciones;
 	}
 	
@@ -124,20 +104,10 @@ public class Mask {
 						posiblesFunctions.add("valorWhere");	
 					}
 				}
-				
-				posiblesFunctions.add("camposOrderBy");	
+				// Deberia filtrarlos con algun criterio (como en los casos anteriores).
+				posiblesFunctions.add("camposOrderBy");
+				posiblesFunctions.add("camposGroupBy");
 			}
-			
-			/*
-			if (tag.startsWith("VMP") && this.mascara.contains("VMP SP")){
-				posiblesFunctions.add("ordenamiento");
-			}
-			
-			if (tag.startsWith("SP") && this.mascara.contains("VMP SP")){
-				posiblesFunctions.add("ordenamiento");
-			}
-			*/
-			
 			
 		} else {
 			posiblesFunctions.add("");

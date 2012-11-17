@@ -160,6 +160,8 @@ public class NplServiceFreeLingImpl implements NplService {
 		HashMap<Integer, String> nplAnalysis = new HashMap<Integer, String>();
 
 		boolean tieneOrdenamiento = false;
+		boolean tieneAgrupamiento = false;
+		boolean isAValidCommand = false;
 		// -------------------------------------------------------------------------------
 		// Para validar si una palabra es parecida a un campoWhere
 		HashMap<String, String> possibleDataEntityColumns = new HashMap<String, String>();
@@ -207,13 +209,21 @@ public class NplServiceFreeLingImpl implements NplService {
 					if (idioma.isAValidCommand(preForm)){
 						funcion = "comando";
 						palabra = preForm;
-					} 
+						isAValidCommand = true;
+					} else {
+						isAValidCommand = false;
+					}
 				}
 				// Ordenamiento
 				log.info("Paso 1");
 				if (lemma.equalsIgnoreCase("ordenar")) {
 					log.info("Paso 2");
 					tieneOrdenamiento = true;
+				}
+				// Agrupamiento
+				if (lemma.equalsIgnoreCase("agrupar")) {
+					log.info("Paso 2");
+					tieneAgrupamiento = true;
 				}
 			/* *************************************************************************** */
 			} else if (wordType.get(indicePalabraActual).equalsIgnoreCase("Nombre")){
@@ -227,13 +237,9 @@ public class NplServiceFreeLingImpl implements NplService {
 					
 					possibleDataEntityColumns.put(dataEntity.getAlias(), dataEntity.getColummns());
 					possibleEntities.add(dataEntity.getAlias());
-					
-					
-					
+			
 				} else {
-					log.info("Paso 3");
-					if (!tieneOrdenamiento){
-						//String funcion = "";
+					if (!tieneOrdenamiento && !tieneAgrupamiento){
 						boolean esCampoWhere = false;
 						for (int i = 0; i < possibleEntities.size(); i++){
 							String[] s = possibleDataEntityColumns.get(possibleEntities.get(i)).split(",");
@@ -264,17 +270,16 @@ public class NplServiceFreeLingImpl implements NplService {
 					}
 					else if (tieneOrdenamiento) {
 						// Ordenamiento
-						log.info("Paso 4: "  + funcion);
-						
 						if (funcion.equalsIgnoreCase("")){
 							funcion += "camposOrderBy";
-						} else {
-							funcion += ",camposOrderBy";	
-						}
-						
+						} 
+					} 
+					else if (tieneAgrupamiento) {
+						// Agrupamiento
+						if (funcion.equalsIgnoreCase("")){
+							funcion += "camposGroupBy";
+						} 
 					} // fin del if
-					
-					log.info("Paso 5: " + funcion);
 				}
 			/* *************************************************************************** */				
 			} else if (wordType.get(indicePalabraActual).equalsIgnoreCase("Adverbio")){
@@ -290,6 +295,10 @@ public class NplServiceFreeLingImpl implements NplService {
 							} 
 						}
 					}
+				} else if (form.equalsIgnoreCase("entre")){
+					funcion = "operadorComparacion";
+					palabra = " BETWEEN ";
+					
 				}
 			/* *************************************************************************** */	
 			} else if (wordType.get(indicePalabraActual).equalsIgnoreCase("Adjetivo")){
@@ -351,112 +360,105 @@ public class NplServiceFreeLingImpl implements NplService {
 		// ya tengo las palabras base ahora tengo que hacer la consulta......
 		// ?????????????????????????????????????????????????????????????????
 
-		DataEntity dataEntity = naturalQueryService.findDataEntitieByAlias(wordCollection.get(1).toString());
 		
-		Programming prog = new Programming(wordCollection, wordType, nplAnalysis, mascaraActual, LANG, dataEntity);
-
-		log.info("------------------------------------------------------------------------");
-		String resultado = String.format("%1$-4s","|ID") +
-							String.format("%1$-6s","| Tag") +
-							String.format("%1$-16s","| Word") +
-							String.format("%1$-20s","| Type: ") +
-							String.format("%1$-26s","| Function ") + "|";
-		
-		log.info(resultado);
-		log.info("------------------------------------------------------------------------");
-		for (int i = 0; i < prog.getAnalysisResults().size(); i++){
-			log.info(prog.getAnalysisResults().get(i));
-		}
-		log.info("------------------------------------------------------------------------");
-		
-		// **************************************************************************
-		
-		if (prog.getData().containsKey("comando")) {
+		if (isAValidCommand) {
+			DataEntity dataEntity = naturalQueryService.findDataEntitieByAlias(wordCollection.get(1).toString());
 			
-			long nplRequestId = 0;
-			//DataEntity dataEntity = naturalQueryService.findDataEntitieByAlias(bp.getData().get("entidad"));
-			//if (dataEntity != null) {
-			if (!prog.getData().isEmpty()) {
-				
-				// *******************************************************
-				// TODO: FEISIMO!!!!
-				/*
-				if (bp.getData().get("comando").equalsIgnoreCase("graficar")) {
-					bp.getData().put("camposGroupBy", dataEntity.getGroupColumn());
-					bp.getData().put("campoSelect", dataEntity.getCountColumn());
-					bp.getData().put("funcAgregado", "COUNT");
-				} else {
-					bp.getData().put("camposSelect", dataEntity.getColummns());
-				}
-				*/
-				//bp.getData().put("campoCount", dataEntity.getCountColumn());
-				// *******************************************************
-				
-				log.info("------------------------------------------------------------------------");
-				log.info("Mascara         : " + prog.getData().get("mascara"));
-				log.info("Comando         : " + prog.getData().get("comando")); 
-				log.info("Entidad         : " + prog.getData().get("entidad"));
-				log.info("Campos SELECT   : " + prog.getData().get("camposSelect"));
-				log.info("Condiciones     : " + prog.getData().get("condiciones"));
-				log.info("Op. Logicos     : " + prog.getData().get("operadoresLogicos"));
-				log.info("Campos GROUP BY : " + prog.getData().get("camposGroupBy"));
-				log.info("Campos ORDER BY : " + prog.getData().get("camposOrderBy"));
-				log.info("Func. Agregado  : " + prog.getData().get("funcAgregado"));
-				log.info("------------------------------------------------------------------------");
-				
-				/* **************************** Generar SQL ********************************* */
-				Query query = new Query(prog.getData());
-				/* ************************************************************************** */
-				
-				sqlActual = query.getSql();
-				log.info("SQL Generado: " + sqlActual);
-				
-				if (sqlActual != null && !sqlActual.equalsIgnoreCase("")) {
-					/* ----------------------------------------------------------------*/		
-					/*                            CONTAR                               */
-					/* ----------------------------------------------------------------*/
-					if (prog.getData().get("comando").equalsIgnoreCase("contar")) {
-						int countEntidad = jdbcTemplate.queryForInt(sqlActual);
-						values.put("simpleText", "El resultado es " + countEntidad);
-						nplResponse.setResponseData(values);
-					/* ----------------------------------------------------------------*/		
-					/*                            LISTAR                               */
-					/* ----------------------------------------------------------------*/
-					} else if (prog.getData().get("comando").equalsIgnoreCase("listar")) {
-						nplResponse.setResponseType("list");
-						if (!isFromMobile) {
-							nplResponse.setResponseData(jdbcTemplate.queryForList(sqlActual));
-						} else {
-							nplRequestId = nplRequestDAO.saveNplRequest(nplRequest);
-							nplResponse.setResponseType("link");
-							values.put("simpleText", "Click para ver el listado");
-							values.put("url", "/list.html?queryId=" + nplRequestId);
-						}
-						
-					/* ----------------------------------------------------------------*/		
-					/*                           GRAFICAR                              */
-					/* ----------------------------------------------------------------*/
-					} else if (prog.getData().get("comando").equalsIgnoreCase("graficar")) {
-						nplResponse.setResponseType("pie-chart");
-						
-						if (!isFromMobile) {
-							nplResponse.setResponseData(jdbcTemplate.queryForList(sqlActual));
-						} else {
-							nplRequestId = nplRequestDAO.saveNplRequest(nplRequest);
-							nplResponse.setResponseType("link");
-							values.put("simpleText", "Click para ver el grafico");
-							values.put("url", "/chart.html?queryId=" + nplRequestId);
+			Programming prog = new Programming(wordCollection, wordType, nplAnalysis, mascaraActual, LANG, dataEntity);
 
-							// TODO: Me falta guardar la consulta en la base
-							// para ejecutar despues.....
+			log.info("------------------------------------------------------------------------");
+			String resultado = String.format("%1$-4s","|ID") +
+								String.format("%1$-6s","| Tag") +
+								String.format("%1$-16s","| Word") +
+								String.format("%1$-20s","| Type: ") +
+								String.format("%1$-26s","| Function ") + "|";
+			
+			log.info(resultado);
+			log.info("------------------------------------------------------------------------");
+			for (int i = 0; i < prog.getAnalysisResults().size(); i++){
+				log.info(prog.getAnalysisResults().get(i));
+			}
+			log.info("------------------------------------------------------------------------");
+			
+			// **************************************************************************
+			
+			if (prog.getData().containsKey("comando")) {
+				
+				long nplRequestId = 0;
+				//DataEntity dataEntity = naturalQueryService.findDataEntitieByAlias(bp.getData().get("entidad"));
+				//if (dataEntity != null) {
+				if (!prog.getData().isEmpty()) {
+					
+					log.info("------------------------------------------------------------------------");
+					log.info("Mascara         : " + prog.getData().get("mascara"));
+					log.info("Comando         : " + prog.getData().get("comando")); 
+					log.info("Entidad         : " + prog.getData().get("entidad"));
+					log.info("Campos SELECT   : " + prog.getData().get("camposSelect"));
+					log.info("Condiciones     : " + prog.getData().get("condiciones"));
+					log.info("Op. Logicos     : " + prog.getData().get("operadoresLogicos"));
+					log.info("Campos GROUP BY : " + prog.getData().get("camposGroupBy"));
+					log.info("Campos ORDER BY : " + prog.getData().get("camposOrderBy"));
+					log.info("Func. Agregado  : " + prog.getData().get("funcAgregado"));
+					log.info("------------------------------------------------------------------------");
+					
+					/* **************************** Generar SQL ********************************* */
+					Query query = new Query(prog.getData());
+					/* ************************************************************************** */
+					
+					sqlActual = query.getSql();
+					log.info("SQL Generado: " + sqlActual);
+					
+					if (sqlActual != null && !sqlActual.equalsIgnoreCase("")) {
+						/* ----------------------------------------------------------------*/		
+						/*                            CONTAR                               */
+						/* ----------------------------------------------------------------*/
+						if (prog.getData().get("comando").equalsIgnoreCase("contar")) {
+							int countEntidad = jdbcTemplate.queryForInt(sqlActual);
+							values.put("simpleText", "El resultado es " + countEntidad);
+							nplResponse.setResponseData(values);
+						/* ----------------------------------------------------------------*/		
+						/*                            LISTAR                               */
+						/* ----------------------------------------------------------------*/
+						} else if (prog.getData().get("comando").equalsIgnoreCase("listar")) {
+							nplResponse.setResponseType("list");
+							if (!isFromMobile) {
+								nplResponse.setResponseData(jdbcTemplate.queryForList(sqlActual));
+							} else {
+								nplRequestId = nplRequestDAO.saveNplRequest(nplRequest);
+								nplResponse.setResponseType("link");
+								values.put("simpleText", "Click para ver el listado");
+								values.put("url", "/list.html?queryId=" + nplRequestId);
+							}
+							
+						/* ----------------------------------------------------------------*/		
+						/*                           GRAFICAR                              */
+						/* ----------------------------------------------------------------*/
+						} else if (prog.getData().get("comando").equalsIgnoreCase("graficar")) {
+							nplResponse.setResponseType("pie-chart");
+							
+							if (!isFromMobile) {
+								nplResponse.setResponseData(jdbcTemplate.queryForList(sqlActual));
+							} else {
+								nplRequestId = nplRequestDAO.saveNplRequest(nplRequest);
+								nplResponse.setResponseType("link");
+								values.put("simpleText", "Click para ver el grafico");
+								values.put("url", "/chart.html?queryId=" + nplRequestId);
+
+								// TODO: Me falta guardar la consulta en la base
+								// para ejecutar despues.....
+							}
 						}
-					}
-					/* ----------------------------------------------------------------*/
-				} else{
-					log.info("No se pudo generar la consulta SQL.");			
-				} 
+						/* ----------------------------------------------------------------*/
+					} else{
+						log.info("No se pudo generar la consulta SQL.");			
+					} 
+				}	
 			}	
-		} 
+			
+		} else {
+			log.info("Comando invalido.");	
+		}
+		 
 		// ?????????????????????????????????????????????????????????????????
 
 		log.info("Resultado del analize " + nplResponse);

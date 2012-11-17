@@ -1,8 +1,5 @@
 package edu.palermo.hql.bo;
 
-//import java.util.ArrayList;
-//import java.util.HashMap;
-
 import org.joda.time.DateTime;
 
 public class Language {

@@ -24,8 +24,12 @@ public class Programming {
 	
 	private HashMap<Integer, String> analysisResults = new HashMap<Integer, String>();
 	
-	public Programming(ArrayList<String> wordCollection, HashMap<Integer, String> wordType, 
-							HashMap<Integer, String> nplAnalysis, String mascara, String lang, DataEntity dataEntity){
+	public Programming(ArrayList<String> wordCollection, 
+						HashMap<Integer, String> wordType, 
+						HashMap<Integer, String> nplAnalysis, 
+						String mascara, 
+						String lang, 
+						DataEntity dataEntity){
 		
 		// Se busca una obtener una idea aproximada del comportamiento de cada palabra 
 		// de acuerdo a los resultados del analisis de la mascara y del servicio
@@ -41,12 +45,9 @@ public class Programming {
 		
 		this.compareFunctions = this.compareFunctions();
 		
-		this.analize();
-		this.completeData(mascara, dataEntity);
-	}
-
-
-	private void analize(){
+		// *****************************************************************************
+		// this.analize();
+		// *****************************************************************************
 		
 		for (int i = 0; i < this.wordCollection.size(); i++){
 			
@@ -65,21 +66,21 @@ public class Programming {
 			
 			this.analysisResults.put(i, resultado);	
 		}
-	}
-	
-	private void completeData(String mascara, DataEntity dataEntity){
-		
+		// *****************************************************************************
+		// this.completeData(mascara, dataEntity);		
+		// *****************************************************************************
 		ArrayList<String> condiciones = new ArrayList<String>();
 		String condicion = "";
 		
 		String campoWhere = "";
 		String valorWhere = "";
 		String operadorComparacion = "";
+		ArrayList<String> camposOrderBy = new ArrayList<String>();
+		ArrayList<String> camposGroupBy = new ArrayList<String>();
 		ArrayList<String> operadoresLogicos = new ArrayList<String>(); 
-		//String operadorLogico = "";
-		
+	
 		String campoWhereAnterior = "";
-		//boolean esOtraCondicion = false;
+		//String palabraAnterior = "";
 		
 		this.data.put("mascara", mascara);
 		
@@ -90,90 +91,90 @@ public class Programming {
 			
 			if (funcion.equalsIgnoreCase("comando")){
 				this.data.put(funcion, palabra);
-				if (palabra.equalsIgnoreCase("graficar")){
-					this.data.put("funcAgregado", "COUNT");
-				}
+
 			} else if (funcion.equalsIgnoreCase("entidad")) {
 				this.data.put(funcion, palabra);
 				
 				if (dataEntity != null) {
-				
-					if (this.data.get("comando").equalsIgnoreCase("graficar")){
-						
-						this.data.put("camposGroupBy", dataEntity.getGroupColumn());
-						this.data.put("camposSelect", dataEntity.getGroupColumn());
-						this.data.put("funcAgregado", "COUNT");
-						
-						log.info("===============================================");
-						log.info("camposGroupBy: " + dataEntity.getGroupColumn());
-						log.info("camposSelect: " + dataEntity.getGroupColumn());
-						log.info("funcAgregado: " + "COUNT");	
-						
-					} else {
 
+					log.info(this.data.get("comando").toString());
+					if (this.data.get("comando").equalsIgnoreCase("graficar")){
+						camposGroupBy.add(dataEntity.getGroupColumn());		
+						this.data.put("camposSelect", dataEntity.getGroupColumn());
+						this.data.put("funcAgregado", "COUNT");						
+					} else {
 						this.data.put("camposSelect", dataEntity.getColummns());
 						log.info("camposSelect: " + dataEntity.getColummns());	
 					}
-					
-					
 				}
-				/*
-			} else if (funcion.equalsIgnoreCase("camposSelect")) {
-				this.data.put(funcion, palabra);
-				*/
 			} else if (funcion.equalsIgnoreCase("operadoresLogicos")) {
-				//this.data.put(funcion, palabra);
 				operadoresLogicos.add(palabra);
-				//operadorLogico += palabra;
 			} else if (funcion.equalsIgnoreCase("campoWhere")) {
 				campoWhere = "";
 				campoWhere += palabra;
 				condicion = "";
-				//condicion += palabra;
 			} else if (funcion.equalsIgnoreCase("operadorComparacion")) {
-				//condicion += palabra;
 				operadorComparacion = "";
 				operadorComparacion += palabra;
 			} else if (funcion.equalsIgnoreCase("valorWhere")) {
-			
 				if (!operadoresLogicos.isEmpty() && campoWhere.equalsIgnoreCase(campoWhereAnterior)){
 					if (operadoresLogicos.contains("AND")){
 						operadoresLogicos.remove(operadoresLogicos.lastIndexOf("AND"));
 						operadoresLogicos.add("OR");
 					}
 				} 
-				
+				/*
+				 * else if (palabraAnterior.equalsIgnoreCase(",") && campoWhere.equalsIgnoreCase(campoWhereAnterior)) {
+					operadoresLogicos.add("OR");
+				}
+				*/
 				valorWhere = "";
 				valorWhere += palabra;
-
-				condicion = campoWhere + operadorComparacion + valorWhere;
-								
+				// TEST
+				if (operadorComparacion.equalsIgnoreCase(" BETWEEN ")){
+					if (campoWhere.equalsIgnoreCase(campoWhereAnterior)){
+						if (operadoresLogicos.contains("OR")){
+							operadoresLogicos.remove(operadoresLogicos.lastIndexOf("OR"));
+							operadoresLogicos.add("AND");
+						}
+						condicion = campoWhere + " <= " + valorWhere;
+					} else {
+						condicion = campoWhere + " >= " + valorWhere;
+					}
+				} else {
+					condicion = campoWhere + operadorComparacion + valorWhere;
+				}				
+				//condicion = campoWhere + operadorComparacion + valorWhere;
 				campoWhereAnterior = campoWhere;
+
 				condiciones.add(condicion);
 			}
-			/*
-			 else if (funcion.equalsIgnoreCase("camposGroupBy")) {
-				this.data.put(funcion, palabra);
+			else if (funcion.equalsIgnoreCase("camposGroupBy")) {
+				camposGroupBy.add(palabra);
 			} 
-			*/
 			else if (funcion.equalsIgnoreCase("camposOrderBy")) {
-				log.info("Paso 6: " + funcion);
-				this.data.put(funcion, palabra);
+				camposOrderBy.add(palabra);
 			} else {
-				
+				// Nada...
 			}
 			
 		}
-
-		// Condiciones
-		String s = this.convertArrayListInString(condiciones, ",");
-		this.data.put("condiciones", s);
+		
+		// ***************************************************************************
 		
 		String r = this.convertArrayListInString(operadoresLogicos, ",");
 		this.data.put("operadoresLogicos", r);
-		// ***************************************************************************
 		
-		log.info("Paso 7: " + this.data.get("camposOrderBy"));
+		String s = this.convertArrayListInString(condiciones, ",");
+		this.data.put("condiciones", s);
+		
+		String t = this.convertArrayListInString(camposOrderBy, ",");
+		this.data.put("camposOrderBy", t);
+		
+		String u = this.convertArrayListInString(camposGroupBy, ",");
+		this.data.put("camposGroupBy", u);
+		
+		// ***************************************************************************
 	}
 	
 	private HashMap<Integer, String> compareFunctions(){

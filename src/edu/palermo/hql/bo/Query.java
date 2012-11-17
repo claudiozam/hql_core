@@ -118,8 +118,8 @@ public class Query {
 									if (r[i-1].equalsIgnoreCase("OR")) {
 										whereClause += " " + r[i-1] + " " + this.generateCondition(s[i]) + ") ";
 									} else {
-										whereClause += " " + r[i-1] + " " + this.generateCondition(s[i]);	
-									}	
+										whereClause += " " + r[i-1] + " " + this.generateCondition(s[i]);
+									}
 								}
 							}
 						}
@@ -138,7 +138,14 @@ public class Query {
 		String orderByClause = "";
 		if (camposOrderBy != null){
 			if (!camposOrderBy.equalsIgnoreCase("")){
-				orderByClause = " ORDER BY " + camposOrderBy;
+				String s[] = camposOrderBy.split(",");			
+				for (int i = 0; i < s.length; i++){
+					if (i == 0){
+						orderByClause += " ORDER BY " + s[i].toString();
+					} else {
+						orderByClause += ", " + s[i].toString();	
+					}	
+				}	
 			}
 		}
 		return orderByClause;
@@ -150,7 +157,14 @@ public class Query {
 		String groupByClause = "";
 		if (camposGroupBy != null){
 			if (!camposGroupBy.equalsIgnoreCase("")){
-				groupByClause = " GROUP BY " + camposGroupBy;
+				String s[] = camposGroupBy.split(",");			
+				for (int i = 0; i < s.length; i++){
+					if (i == 0){
+						groupByClause += " GROUP BY " + s[i].toString();
+					} else {
+						groupByClause += ", " + s[i].toString();	
+					}	
+				}	
 			}
 		}
 		return groupByClause;
